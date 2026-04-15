@@ -15,6 +15,8 @@ import SignupPage from "./pages/auth/SignupPage";
 import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/admin/AdminPage";
 import SettingsPage from "./pages/SettingsPage";
+import MateriaisPageRoute from "./pages/materiais/MateriaisPageRoute";
+import FinanceiroPageRoute from "./pages/financeiro/FinanceiroPageRoute";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 const queryClient = new QueryClient();
