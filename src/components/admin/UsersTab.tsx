@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, UserPlus, Trash2 } from "lucide-react";
+import { Loader2, UserPlus, Trash2, Users } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRoles";
 
 const ROLES: AppRole[] = ["admin", "coordenador", "lideranca", "operador", "visualizador"];
@@ -83,6 +83,22 @@ export function UsersTab() {
     },
   });
 
+  const seedUsers = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("seed-test-users");
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      const created = data.results?.filter((r: any) => r.status === "created").length || 0;
+      toast({ title: `Seed concluído! ${created} usuários criados.` });
+    },
+    onError: (e: any) => {
+      toast({ variant: "destructive", title: "Erro no seed", description: e.message });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -93,8 +109,17 @@ export function UsersTab() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Usuários do Sistema ({users.length})</CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => seedUsers.mutate()}
+          disabled={seedUsers.isPending}
+        >
+          {seedUsers.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Users className="h-4 w-4 mr-1" />}
+          Seed Usuários Teste
+        </Button>
       </CardHeader>
       <CardContent>
         <Table>
