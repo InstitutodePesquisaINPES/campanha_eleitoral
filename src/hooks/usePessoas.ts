@@ -17,7 +17,7 @@ export function usePessoas(search?: string, nivel?: string) {
     queryFn: async () => {
       let q = supabase.from("pessoas").select("*, pessoas_papeis(papel, ativo), pessoas_contatos(tipo, valor, principal), pessoas_tags(tag_id, tags(nome, cor))").order("full_name").limit(200);
       if (search) q = q.ilike("full_name", `%${search}%`);
-      if (nivel && nivel !== "all") q = q.eq("nivel_relacionamento", nivel);
+      if (nivel && nivel !== "all") q = q.eq("nivel_relacionamento", nivel as NivelRelacionamento);
       const { data, error } = await q;
       if (error) throw error;
       return data || [];
