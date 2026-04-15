@@ -17,6 +17,9 @@ import AdminPage from "./pages/admin/AdminPage";
 import SettingsPage from "./pages/SettingsPage";
 import MateriaisPageRoute from "./pages/materiais/MateriaisPageRoute";
 import FinanceiroPageRoute from "./pages/financeiro/FinanceiroPageRoute";
+import BIPage from "./pages/bi/BIPage";
+import MapasPage from "./pages/mapas/MapasPage";
+import ComunicacaoPage from "./pages/comunicacao/ComunicacaoPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 const queryClient = new QueryClient();
@@ -42,10 +45,10 @@ const App = () => (
             <Route path="/campo" element={<PlaceholderPage title="Campo" stage={5} />} />
             <Route path="/materiais" element={<MateriaisPageRoute />} />
             <Route path="/financeiro" element={<FinanceiroPageRoute />} />
-            <Route path="/bi" element={<PlaceholderPage title="BI / Dashboards" stage={6} />} />
-            <Route path="/mapas" element={<PlaceholderPage title="Mapas" stage={6} />} />
-            <Route path="/documentos" element={<PlaceholderPage title="Documentos" stage={6} />} />
-            <Route path="/comunicacao" element={<PlaceholderPage title="Comunicação" stage={6} />} />
+            <Route path="/bi" element={<BIPage />} />
+            <Route path="/mapas" element={<MapasPage />} />
+            <Route path="/documentos" element={<PlaceholderPage title="Documentos" stage={7} />} />
+            <Route path="/comunicacao" element={<ComunicacaoPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
