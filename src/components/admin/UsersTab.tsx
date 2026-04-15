@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, UserPlus, Trash2 } from "lucide-react";
+import { Loader2, UserPlus, Trash2, Users } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRoles";
 
 const ROLES: AppRole[] = ["admin", "coordenador", "lideranca", "operador", "visualizador"];
