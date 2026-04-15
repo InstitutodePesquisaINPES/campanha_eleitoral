@@ -54,7 +54,7 @@ export function BairrosTab() {
       await createBairro.mutateAsync({
         nome: form.nome,
         municipio_id: form.municipio_id,
-        classificacao: form.classificacao || undefined,
+        classificacao: (form.classificacao || undefined) as "reduto" | "expansao" | "disputa" | "risco" | "baixa_presenca" | undefined,
       });
       toast({ title: "Bairro criado!" });
       setOpen(false);

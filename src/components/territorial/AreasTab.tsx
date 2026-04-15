@@ -40,7 +40,7 @@ export function AreasTab() {
     const mid = form.municipio_id || municipioFilter;
     if (!form.nome || !mid) { toast({ variant: "destructive", title: "Preencha nome e município" }); return; }
     try {
-      await createArea.mutateAsync({ nome: form.nome, tipo: form.tipo, municipio_id: mid, observacoes: form.observacoes || undefined });
+      await createArea.mutateAsync({ nome: form.nome, tipo: form.tipo as "equipe" | "lider" | "coordenador", municipio_id: mid, observacoes: form.observacoes || undefined });
       toast({ title: "Área de atuação criada!" });
       setOpen(false);
       setForm({ nome: "", tipo: "equipe", municipio_id: "", observacoes: "" });
