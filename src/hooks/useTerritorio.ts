@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+type ClassificacaoTerritorial = "reduto" | "expansao" | "disputa" | "risco" | "baixa_presenca";
+type TipoAreaAtuacao = "equipe" | "lider" | "coordenador";
+
 // ---- ESTADOS ----
 export function useEstados() {
   return useQuery({
@@ -82,7 +85,7 @@ export function useBairros(municipioId?: string) {
 export function useCreateBairro() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (values: { nome: string; municipio_id: string; distrito_id?: string; classificacao?: string; latitude?: number; longitude?: number }) => {
+    mutationFn: async (values: { nome: string; municipio_id: string; distrito_id?: string; classificacao?: ClassificacaoTerritorial; latitude?: number; longitude?: number }) => {
       const { data, error } = await supabase.from("bairros").insert(values).select().single();
       if (error) throw error;
       return data;
@@ -94,7 +97,7 @@ export function useCreateBairro() {
 export function useUpdateBairro() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...values }: { id: string; nome?: string; municipio_id?: string; distrito_id?: string | null; classificacao?: string | null; latitude?: number; longitude?: number }) => {
+    mutationFn: async ({ id, ...values }: { id: string; nome?: string; municipio_id?: string; distrito_id?: string | null; classificacao?: ClassificacaoTerritorial | null; latitude?: number; longitude?: number }) => {
       const { data, error } = await supabase.from("bairros").update(values).eq("id", id).select().single();
       if (error) throw error;
       return data;
@@ -236,7 +239,7 @@ export function useAreasAtuacao(municipioId?: string) {
 export function useCreateAreaAtuacao() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (values: { nome: string; tipo: string; municipio_id: string; responsavel_id?: string; bairros_ids?: string[]; observacoes?: string }) => {
+    mutationFn: async (values: { nome: string; tipo: TipoAreaAtuacao; municipio_id: string; responsavel_id?: string; bairros_ids?: string[]; observacoes?: string }) => {
       const { data, error } = await supabase.from("areas_atuacao").insert(values).select().single();
       if (error) throw error;
       return data;
