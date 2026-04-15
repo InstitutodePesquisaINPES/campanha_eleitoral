@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import TerritoriosPage from "./pages/territorial/TerritoriosPage";
+import PessoasPage from "./pages/crm/PessoasPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
 import ProfilePage from "./pages/ProfilePage";
