@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
-import { useTarefas, useUpdateTarefa, type Tarefa } from "@/hooks/useCampanhas";
+import { useTarefas, useUpdateTarefa, useCreateTarefa, useDeleteTarefa, type Tarefa } from "@/hooks/useCampanhas";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Calendar as CalIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Calendar as CalIcon, Plus, Trash2 } from "lucide-react";
 
 const areaColors: Record<string, string> = {
   organizacao: "bg-primary/10 text-primary border-primary/30",
@@ -26,9 +29,79 @@ const prioColors: Record<string, string> = {
   baixa: "bg-muted text-muted-foreground",
 };
 
+const AREAS = ["organizacao","campo","digital","financeiro","juridico","comunicacao","logistica","dados"] as const;
+const PRIORIDADES = ["urgente","alta","media","baixa"] as const;
+
+function NovaTarefaDialog({ campanhaId }: { campanhaId: string }) {
+  const [open, setOpen] = useState(false);
+  const create = useCreateTarefa();
+  const [form, setForm] = useState({
+    titulo: "", descricao: "", area: "campo", prioridade: "media",
+    dia: 1, semana: 1, data_prevista: new Date().toISOString().slice(0, 10),
+  });
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8 gap-1"><Plus className="h-3.5 w-3.5" />Nova tarefa</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Adicionar tarefa</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <div><Label>Título *</Label><Input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Área</Label>
+              <Select value={form.area} onValueChange={(v) => setForm({ ...form, area: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{AREAS.map(a => <SelectItem key={a} value={a} className="capitalize">{a}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Prioridade</Label>
+              <Select value={form.prioridade} onValueChange={(v) => setForm({ ...form, prioridade: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PRIORIDADES.map(p => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div><Label>Dia (1-90)</Label><Input type="number" min={1} max={90} value={form.dia} onChange={(e) => setForm({ ...form, dia: +e.target.value })} /></div>
+            <div><Label>Semana (1-13)</Label><Input type="number" min={1} max={13} value={form.semana} onChange={(e) => setForm({ ...form, semana: +e.target.value })} /></div>
+            <div><Label>Data prevista</Label><Input type="date" value={form.data_prevista} onChange={(e) => setForm({ ...form, data_prevista: e.target.value })} /></div>
+          </div>
+          <div><Label>Descrição</Label><Input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button
+            disabled={!form.titulo || create.isPending}
+            onClick={async () => {
+              await create.mutateAsync({
+                campanha_id: campanhaId,
+                titulo: form.titulo,
+                descricao: form.descricao || null,
+                area: form.area as never,
+                prioridade: form.prioridade as never,
+                dia: form.dia,
+                semana: form.semana,
+                data_prevista: form.data_prevista,
+              });
+              setForm({ titulo: "", descricao: "", area: "campo", prioridade: "media", dia: 1, semana: 1, data_prevista: new Date().toISOString().slice(0, 10) });
+              setOpen(false);
+            }}
+          >
+            {create.isPending ? "Salvando..." : "Adicionar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function CronogramaTarefas({ campanhaId }: { campanhaId: string }) {
   const { data: tarefas = [], isLoading } = useTarefas(campanhaId);
   const update = useUpdateTarefa();
+  const remove = useDeleteTarefa();
   const [filtro, setFiltro] = useState("");
   const [areaFiltro, setAreaFiltro] = useState<string>("todas");
   const [statusFiltro, setStatusFiltro] = useState<string>("todas");
@@ -68,27 +141,16 @@ export function CronogramaTarefas({ campanhaId }: { campanhaId: string }) {
           <Badge variant="outline" className="bg-success/10 text-success border-success/30">{stats.pct}% concluído</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
+          <NovaTarefaDialog campanhaId={campanhaId} />
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-              placeholder="Buscar tarefa..."
-              className="pl-7 h-8 w-48"
-            />
+            <Input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder="Buscar tarefa..." className="pl-7 h-8 w-48" />
           </div>
           <Select value={areaFiltro} onValueChange={setAreaFiltro}>
             <SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas as áreas</SelectItem>
-              <SelectItem value="organizacao">Organização</SelectItem>
-              <SelectItem value="campo">Campo</SelectItem>
-              <SelectItem value="digital">Digital</SelectItem>
-              <SelectItem value="financeiro">Financeiro</SelectItem>
-              <SelectItem value="juridico">Jurídico</SelectItem>
-              <SelectItem value="comunicacao">Comunicação</SelectItem>
-              <SelectItem value="logistica">Logística</SelectItem>
-              <SelectItem value="dados">Dados</SelectItem>
+              {AREAS.map(a => <SelectItem key={a} value={a} className="capitalize">{a}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={statusFiltro} onValueChange={setStatusFiltro}>
@@ -139,9 +201,16 @@ export function CronogramaTarefas({ campanhaId }: { campanhaId: string }) {
                               Dia {t.dia} · {new Date(t.data_prevista).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
                             </span>
                           </div>
-                          <div className="flex flex-wrap gap-1 mt-1.5">
+                          <div className="flex flex-wrap gap-1 mt-1.5 items-center">
                             <Badge variant="outline" className={`text-[10px] capitalize ${areaColors[t.area]}`}>{t.area}</Badge>
                             <Badge variant="outline" className={`text-[10px] capitalize ${prioColors[t.prioridade]}`}>{t.prioridade}</Badge>
+                            <button
+                              onClick={() => confirm(`Remover "${t.titulo}"?`) && remove.mutate(t.id)}
+                              className="ml-auto text-muted-foreground hover:text-destructive p-0.5"
+                              title="Remover tarefa"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
                           </div>
                         </div>
                       </CardContent>
