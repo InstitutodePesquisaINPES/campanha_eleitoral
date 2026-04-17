@@ -113,19 +113,19 @@ export function BairrosTab() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-3 flex-wrap">
-          <Select value={estadoFilter} onValueChange={(v) => { setEstadoFilter(v); setMunicipioFilter(""); }}>
+          <Select value={estadoFilter || "__all__"} onValueChange={(v) => { setEstadoFilter(v === "__all__" ? "" : v); setMunicipioFilter(""); }}>
             <SelectTrigger className="w-44"><SelectValue placeholder="Estado" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="__all__">Todos os estados</SelectItem>
               {estados.map((e: any) => (
                 <SelectItem key={e.id} value={e.id}>{e.sigla}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={municipioFilter} onValueChange={setMunicipioFilter}>
+          <Select value={municipioFilter || "__all__"} onValueChange={(v) => setMunicipioFilter(v === "__all__" ? "" : v)}>
             <SelectTrigger className="w-52"><SelectValue placeholder="Município" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="__all__">Todos os municípios</SelectItem>
               {municipios.map((m: any) => (
                 <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
               ))}
