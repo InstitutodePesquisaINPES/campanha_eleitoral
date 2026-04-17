@@ -84,10 +84,19 @@ function SidebarNavGroup({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild isActive={location.pathname === item.url}>
-                <NavLink to={item.url} end>
-                  <item.icon className="h-4 w-4" />
-                  {!collapsed && <span>{item.title}</span>}
+              <SidebarMenuButton
+                asChild
+                isActive={location.pathname === item.url}
+                tooltip={item.title}
+              >
+                <NavLink
+                  to={item.url}
+                  end
+                  className="flex items-center gap-2"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span className="truncate">{item.title}</span>}
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
