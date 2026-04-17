@@ -109,10 +109,10 @@ export function MunicipiosTab() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-3">
-          <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+          <Select value={estadoFilter || "__all__"} onValueChange={(v) => setEstadoFilter(v === "__all__" ? "" : v)}>
             <SelectTrigger className="w-48"><SelectValue placeholder="Filtrar por estado" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os estados</SelectItem>
+              <SelectItem value="__all__">Todos os estados</SelectItem>
               {estados.map((e: any) => (
                 <SelectItem key={e.id} value={e.id}>{e.sigla} - {e.nome}</SelectItem>
               ))}
