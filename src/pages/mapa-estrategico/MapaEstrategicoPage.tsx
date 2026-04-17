@@ -79,10 +79,10 @@ export default function MapaEstrategicoPage() {
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder="Buscar bairro..." className="pl-7 h-8 w-48" />
                 </div>
-                <Select value={municipioId} onValueChange={setMunicipioId}>
+                <Select value={municipioId || "__all__"} onValueChange={(v) => setMunicipioId(v === "__all__" ? "" : v)}>
                   <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Todos os municípios" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="__all__">Todos</SelectItem>
                     {municipios.map((m) => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
