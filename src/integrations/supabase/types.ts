@@ -621,9 +621,11 @@ export type Database = {
           created_at: string
           data_eleicao: string
           data_inicio_plano: string
+          estado_id: string | null
           id: string
           meta_votos: number | null
           municipio_id: string | null
+          municipios_foco_ids: string[]
           nome: string
           numero_urna: string | null
           observacoes: string | null
@@ -639,9 +641,11 @@ export type Database = {
           created_at?: string
           data_eleicao: string
           data_inicio_plano?: string
+          estado_id?: string | null
           id?: string
           meta_votos?: number | null
           municipio_id?: string | null
+          municipios_foco_ids?: string[]
           nome: string
           numero_urna?: string | null
           observacoes?: string | null
@@ -657,9 +661,11 @@ export type Database = {
           created_at?: string
           data_eleicao?: string
           data_inicio_plano?: string
+          estado_id?: string | null
           id?: string
           meta_votos?: number | null
           municipio_id?: string | null
+          municipios_foco_ids?: string[]
           nome?: string
           numero_urna?: string | null
           observacoes?: string | null
@@ -673,6 +679,13 @@ export type Database = {
             columns: ["candidato_pessoa_id"]
             isOneToOne: false
             referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campanhas_estado_id_fkey"
+            columns: ["estado_id"]
+            isOneToOne: false
+            referencedRelation: "estados"
             referencedColumns: ["id"]
           },
           {
