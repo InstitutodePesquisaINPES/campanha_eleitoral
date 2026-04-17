@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Eye, AlertTriangle, Clock, Search, Download, Filter, X, UserX } from "lucide-react";
+import { Loader2, Plus, Trash2, Eye, AlertTriangle, Clock, Search, Download, Filter, X, UserX, FileText } from "lucide-react";
 import { exportToExcel } from "@/lib/export/excelExport";
 
 export function DemandasList({ onSelect }: { onSelect: (id: string) => void }) {
