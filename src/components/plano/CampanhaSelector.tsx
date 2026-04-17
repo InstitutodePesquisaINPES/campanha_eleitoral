@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { CampanhaEscopoForm, escopoDoCargo, type CargoEleitoral } from "./CampanhaEscopoForm";
+import { toast } from "sonner";
 
-const cargos = [
+const cargos: { v: CargoEleitoral; l: string }[] = [
   { v: "vereador", l: "Vereador" },
   { v: "prefeito", l: "Prefeito" },
   { v: "vice_prefeito", l: "Vice-Prefeito" },
@@ -18,7 +18,7 @@ const cargos = [
   { v: "senador", l: "Senador" },
   { v: "governador", l: "Governador" },
   { v: "presidente", l: "Presidente" },
-] as const;
+];
 
 export function CampanhaSelector({ value, onChange }: { value?: string; onChange: (id: string) => void }) {
   const { data: campanhas = [] } = useCampanhas();
@@ -28,22 +28,21 @@ export function CampanhaSelector({ value, onChange }: { value?: string; onChange
 
   const [form, setForm] = useState({
     nome: "",
-    cargo: "vereador" as (typeof cargos)[number]["v"],
+    cargo: "vereador" as CargoEleitoral,
     data_eleicao: "2026-10-04",
     data_inicio_plano: new Date().toISOString().slice(0, 10),
+    estado_id: "",
     municipio_id: "",
+    municipios_foco_ids: [] as string[],
     meta_votos: 3000,
     numero_urna: "",
     partido_sigla: "",
   });
 
-  const { data: municipios = [] } = useQuery({
-    queryKey: ["municipios-list"],
-    queryFn: async () => {
-      const { data } = await supabase.from("municipios").select("id, nome").order("nome").limit(500);
-      return data ?? [];
-    },
-  });
+  const escopo = escopoDoCargo(form.cargo);
+  const valido =
+    !!form.nome &&
+    (escopo === "municipal" ? !!form.municipio_id : !!form.estado_id);
 
   const current = value ?? ativa?.id;
 
@@ -69,19 +68,22 @@ export function CampanhaSelector({ value, onChange }: { value?: string; onChange
             Nova
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nova Campanha · gera plano 90 dias</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
             <div className="grid gap-1.5">
-              <Label>Nome da campanha</Label>
+              <Label>Nome da campanha *</Label>
               <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex.: João Silva 2026" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
-                <Label>Cargo</Label>
-                <Select value={form.cargo} onValueChange={(v) => setForm({ ...form, cargo: v as typeof form.cargo })}>
+                <Label>Cargo *</Label>
+                <Select
+                  value={form.cargo}
+                  onValueChange={(v) => setForm({ ...form, cargo: v as CargoEleitoral, estado_id: "", municipio_id: "", municipios_foco_ids: [] })}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {cargos.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}
@@ -93,13 +95,22 @@ export function CampanhaSelector({ value, onChange }: { value?: string; onChange
                 <Input value={form.numero_urna} onChange={(e) => setForm({ ...form, numero_urna: e.target.value })} placeholder="55123" />
               </div>
             </div>
+
+            <CampanhaEscopoForm
+              cargo={form.cargo}
+              estadoId={form.estado_id}
+              municipioId={form.municipio_id}
+              municipiosFoco={form.municipios_foco_ids}
+              onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+            />
+
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label>Início do plano</Label>
                 <Input type="date" value={form.data_inicio_plano} onChange={(e) => setForm({ ...form, data_inicio_plano: e.target.value })} />
               </div>
               <div className="grid gap-1.5">
-                <Label>Data da eleição</Label>
+                <Label>Data da eleição *</Label>
                 <Input type="date" value={form.data_eleicao} onChange={(e) => setForm({ ...form, data_eleicao: e.target.value })} />
               </div>
             </div>
@@ -113,31 +124,28 @@ export function CampanhaSelector({ value, onChange }: { value?: string; onChange
                 <Input value={form.partido_sigla} onChange={(e) => setForm({ ...form, partido_sigla: e.target.value.toUpperCase() })} />
               </div>
             </div>
-            <div className="grid gap-1.5">
-              <Label>Município</Label>
-              <Select value={form.municipio_id} onValueChange={(v) => setForm({ ...form, municipio_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {municipios.map((m) => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button
-              disabled={!form.nome || !form.municipio_id || create.isPending}
+              disabled={!valido || create.isPending}
               onClick={async () => {
+                if (!valido) {
+                  toast.error(escopo === "municipal" ? "Selecione um município" : "Selecione um estado");
+                  return;
+                }
                 await create.mutateAsync({
                   nome: form.nome,
                   cargo: form.cargo,
                   data_eleicao: form.data_eleicao,
                   data_inicio_plano: form.data_inicio_plano,
-                  municipio_id: form.municipio_id,
+                  estado_id: form.estado_id || null,
+                  municipio_id: form.municipio_id || null,
+                  municipios_foco_ids: form.municipios_foco_ids,
                   meta_votos: form.meta_votos,
                   numero_urna: form.numero_urna || null,
                   partido_sigla: form.partido_sigla || null,
-                });
+                } as never);
                 setOpen(false);
               }}
             >
