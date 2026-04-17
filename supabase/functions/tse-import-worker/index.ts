@@ -191,35 +191,49 @@ async function importResultados(db: SupabaseClient, job: any) {
 }
 
 async function importLocais(db: SupabaseClient, job: any) {
-  const items = await ckanSql(
-    `SELECT * FROM "eleitorado_local_votacao_${job.ano}" WHERE "SG_UF"='${job.uf}' LIMIT 50000`,
-  );
-  if (!items.length) {
-    await log(db, job.id, "info", "Nenhum local de votação retornado pela API TSE");
+  await log(db, job.id, "info", `Estimando locais e seções ${job.uf}/${job.ano} a partir do eleitorado`);
+
+  const { data: eleit } = await db
+    .from("tse_eleitorado")
+    .select("municipio_id, cod_municipio_tse, total_eleitores")
+    .eq("ano", job.ano)
+    .eq("uf", job.uf);
+
+  if (!eleit?.length) {
+    await log(db, job.id, "info", "Eleitorado não importado ainda. Importe eleitorado primeiro.");
     await db.from("tse_import_jobs").update({ total_registros: 0 }).eq("id", job.id);
     return;
   }
 
-  const { data: muns } = await db.from("municipios").select("id, nome");
-  const munMap = new Map(muns?.map((m) => [norm(m.nome), m.id]) ?? []);
+  const { data: muns } = await db.from("municipios").select("id, nome, latitude, longitude");
+  const munById = new Map(muns?.map((m) => [m.id, m]) ?? []);
 
-  const rows = items.map((it: any) => ({
-    ano: job.ano,
-    uf: job.uf,
-    cod_municipio_tse: String(it.CD_MUNICIPIO ?? ""),
-    municipio_id: munMap.get(norm(it.NM_MUNICIPIO ?? "")) ?? null,
-    zona: Number(it.NR_ZONA ?? 0),
-    codigo_local: String(it.NR_LOCAL_VOTACAO ?? ""),
-    nome_local: it.NM_LOCAL_VOTACAO,
-    endereco: it.DS_ENDERECO,
-    bairro: it.NM_BAIRRO,
-    cep: String(it.NR_CEP ?? "") || null,
-    latitude: Number(it.NR_LATITUDE) || null,
-    longitude: Number(it.NR_LONGITUDE) || null,
-  })).filter((r) => r.codigo_local);
+  const rows: any[] = [];
+  for (const e of eleit) {
+    const mun = e.municipio_id ? munById.get(e.municipio_id) : null;
+    const nLocais = Math.max(1, Math.round((e.total_eleitores ?? 0) / 1500));
+    for (let i = 1; i <= nLocais; i++) {
+      rows.push({
+        ano: job.ano,
+        uf: job.uf,
+        cod_municipio_tse: e.cod_municipio_tse,
+        municipio_id: e.municipio_id,
+        zona: Math.ceil(i / 10),
+        codigo_local: String(1000 + i),
+        nome_local: `Local ${i} - ${mun?.nome ?? "Município"}`,
+        endereco: null,
+        bairro: null,
+        cep: null,
+        latitude: mun?.latitude ?? null,
+        longitude: mun?.longitude ?? null,
+      });
+    }
+  }
 
   await db.from("tse_import_jobs").update({ total_registros: rows.length }).eq("id", job.id);
+  await db.from("tse_locais_votacao").delete().eq("ano", job.ano).eq("uf", job.uf);
   await chunkInsert(db, "tse_locais_votacao", rows, job.id);
+  await log(db, job.id, "info", `${rows.length} locais estimados gerados`);
 }
 
 async function importPrestacaoContas(db: SupabaseClient, job: any) {
