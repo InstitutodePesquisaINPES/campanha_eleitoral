@@ -11,21 +11,39 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Plus, RefreshCw, Trash2, Megaphone } from "lucide-react";
+import { CampanhaEscopoForm, escopoDoCargo, type CargoEleitoral } from "@/components/plano/CampanhaEscopoForm";
 
-const CARGOS = ["prefeito", "vice_prefeito", "vereador", "deputado_estadual", "deputado_federal", "senador", "governador", "vice_governador", "presidente"];
+const CARGOS: { v: CargoEleitoral; l: string }[] = [
+  { v: "vereador", l: "Vereador" },
+  { v: "prefeito", l: "Prefeito" },
+  { v: "vice_prefeito", l: "Vice-Prefeito" },
+  { v: "deputado_estadual", l: "Deputado Estadual" },
+  { v: "deputado_federal", l: "Deputado Federal" },
+  { v: "senador", l: "Senador" },
+  { v: "governador", l: "Governador" },
+  { v: "vice_governador", l: "Vice-Governador" },
+  { v: "presidente", l: "Presidente" },
+];
+
+const initialForm = {
+  nome: "", cargo: "vereador" as CargoEleitoral,
+  data_eleicao: "", data_inicio_plano: new Date().toISOString().slice(0, 10),
+  partido_sigla: "", numero_urna: "", meta_votos: "", orcamento_total: "",
+  estado_id: "", municipio_id: "", municipios_foco_ids: [] as string[],
+};
 
 export function CampanhasTab() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    nome: "", cargo: "vereador", data_eleicao: "", data_inicio_plano: new Date().toISOString().slice(0,10),
-    partido_sigla: "", numero_urna: "", meta_votos: "", orcamento_total: "",
-  });
+  const [form, setForm] = useState(initialForm);
 
   const { data: campanhas = [], isLoading } = useQuery({
     queryKey: ["admin-campanhas"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("campanhas").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("campanhas")
+        .select("*, estados(sigla), municipios(nome)")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -33,12 +51,22 @@ export function CampanhasTab() {
 
   const create = useMutation({
     mutationFn: async () => {
+      const escopo = escopoDoCargo(form.cargo);
+      if (escopo === "municipal" && !form.municipio_id) throw new Error("Selecione um município");
+      if (escopo !== "municipal" && !form.estado_id) throw new Error("Selecione um estado");
+
       const payload: any = {
-        nome: form.nome, cargo: form.cargo as any, data_eleicao: form.data_eleicao,
+        nome: form.nome,
+        cargo: form.cargo,
+        data_eleicao: form.data_eleicao,
         data_inicio_plano: form.data_inicio_plano,
-        partido_sigla: form.partido_sigla || null, numero_urna: form.numero_urna || null,
+        partido_sigla: form.partido_sigla || null,
+        numero_urna: form.numero_urna || null,
         meta_votos: form.meta_votos ? Number(form.meta_votos) : null,
         orcamento_total: form.orcamento_total ? Number(form.orcamento_total) : 0,
+        estado_id: form.estado_id || null,
+        municipio_id: form.municipio_id || null,
+        municipios_foco_ids: form.municipios_foco_ids,
       };
       const { data, error } = await supabase.from("campanhas").insert(payload).select().single();
       if (error) throw error;
@@ -48,9 +76,10 @@ export function CampanhasTab() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-campanhas"] });
+      qc.invalidateQueries({ queryKey: ["campanhas"] });
       toast.success("Campanha criada com plano 90 dias!");
       setOpen(false);
-      setForm({ nome: "", cargo: "vereador", data_eleicao: "", data_inicio_plano: new Date().toISOString().slice(0,10), partido_sigla: "", numero_urna: "", meta_votos: "", orcamento_total: "" });
+      setForm(initialForm);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -93,20 +122,32 @@ export function CampanhasTab() {
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="h-4 w-4 mr-1" />Nova campanha</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Nova Campanha</DialogTitle></DialogHeader>
             <div className="grid gap-3">
               <div><Label>Nome *</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Cargo *</Label>
-                  <Select value={form.cargo} onValueChange={(v) => setForm({ ...form, cargo: v })}>
+                  <Select
+                    value={form.cargo}
+                    onValueChange={(v) => setForm({ ...form, cargo: v as CargoEleitoral, estado_id: "", municipio_id: "", municipios_foco_ids: [] })}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{CARGOS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    <SelectContent>{CARGOS.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div><Label>Partido</Label><Input value={form.partido_sigla} onChange={(e) => setForm({ ...form, partido_sigla: e.target.value })} /></div>
+                <div><Label>Partido</Label><Input value={form.partido_sigla} onChange={(e) => setForm({ ...form, partido_sigla: e.target.value.toUpperCase() })} /></div>
               </div>
+
+              <CampanhaEscopoForm
+                cargo={form.cargo}
+                estadoId={form.estado_id}
+                municipioId={form.municipio_id}
+                municipiosFoco={form.municipios_foco_ids}
+                onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Data eleição *</Label><Input type="date" value={form.data_eleicao} onChange={(e) => setForm({ ...form, data_eleicao: e.target.value })} /></div>
                 <div><Label>Início plano</Label><Input type="date" value={form.data_inicio_plano} onChange={(e) => setForm({ ...form, data_inicio_plano: e.target.value })} /></div>
@@ -141,6 +182,9 @@ export function CampanhasTab() {
                     <span className="font-medium">{c.nome}</span>
                     <Badge variant="outline">{c.cargo}</Badge>
                     {c.partido_sigla && <Badge variant="secondary">{c.partido_sigla}{c.numero_urna ? ` ${c.numero_urna}` : ""}</Badge>}
+                    {c.estados?.sigla && <Badge variant="outline">{c.estados.sigla}</Badge>}
+                    {c.municipios?.nome && <Badge variant="outline">{c.municipios.nome}</Badge>}
+                    {c.municipios_foco_ids?.length > 0 && <Badge variant="outline">+{c.municipios_foco_ids.length} foco</Badge>}
                     {c.ativa && <Badge className="bg-green-500/10 text-green-600">ativa</Badge>}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
@@ -148,9 +192,7 @@ export function CampanhasTab() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <div className="flex items-center gap-1 text-xs">
-                    <Switch checked={c.ativa} onCheckedChange={(v) => toggleAtiva.mutate({ id: c.id, ativa: v })} />
-                  </div>
+                  <Switch checked={c.ativa} onCheckedChange={(v) => toggleAtiva.mutate({ id: c.id, ativa: v })} />
                   <Button size="sm" variant="outline" onClick={() => regerar.mutate(c.id)} disabled={regerar.isPending} title="Regerar plano 90 dias">
                     <RefreshCw className="h-3 w-3" />
                   </Button>
