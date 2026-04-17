@@ -1,0 +1,46 @@
+name: TSE Import (ZIP → Supabase)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tipo:
+        description: "Tipo de dado"
+        required: true
+        type: choice
+        options:
+          - eleitorado
+          - locais
+          - candidatos
+          - resultados
+        default: eleitorado
+      ano:
+        description: "Ano da eleição (ex: 2024, 2022)"
+        required: true
+        default: "2024"
+      uf:
+        description: "UF (ex: BA) ou BR para nacional"
+        required: true
+        default: "BA"
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: npm install --no-save csv-parse@5 unzipper@0.12 node-fetch@3
+
+      - name: Run TSE import
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          TSE_INGEST_TOKEN: ${{ secrets.TSE_INGEST_TOKEN }}
+          TIPO: ${{ inputs.tipo }}
+          ANO: ${{ inputs.ano }}
+          UF: ${{ inputs.uf }}
+        run: node scripts/tse-import.mjs
