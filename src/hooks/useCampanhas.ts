@@ -165,6 +165,37 @@ export function useUpdateTarefa() {
   });
 }
 
+export function useCreateTarefa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Database["public"]["Tables"]["campanha_tarefas"]["Insert"]) => {
+      const { data, error } = await supabase.from("campanha_tarefas").insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tarefas"] });
+      toast.success("Tarefa adicionada");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteTarefa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("campanha_tarefas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tarefas"] });
+      toast.success("Tarefa removida");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function useUpdateMeta() {
   const qc = useQueryClient();
   return useMutation({
@@ -179,6 +210,37 @@ export function useUpdateMeta() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["metas"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useCreateMeta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Database["public"]["Tables"]["campanha_metas"]["Insert"]) => {
+      const { data, error } = await supabase.from("campanha_metas").insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["metas"] });
+      toast.success("Meta adicionada");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteMeta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("campanha_metas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["metas"] });
+      toast.success("Meta removida");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 }
