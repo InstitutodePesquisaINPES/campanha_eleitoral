@@ -3,11 +3,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { CampanhaSelector } from "@/components/plano/CampanhaSelector";
 import { CronogramaTarefas } from "@/components/plano/CronogramaTarefas";
 import { MetasFases, PlanejamentoSemanal } from "@/components/plano/MetasESemanas";
+import { ParametrosGerador } from "@/components/plano/ParametrosGerador";
 import { useCampanha, useCampanhaAtiva } from "@/hooks/useCampanhas";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Vote, Calendar, Target, Trophy, Flame } from "lucide-react";
+import { Vote, Calendar, Target, Trophy, Flame, Settings2 } from "lucide-react";
 
 export default function PlanoCampanhaPage() {
   const { data: ativa } = useCampanhaAtiva();
@@ -93,6 +94,7 @@ export default function PlanoCampanhaPage() {
                 <TabsTrigger value="cronograma">Cronograma 90d</TabsTrigger>
                 <TabsTrigger value="metas">Fases & Metas</TabsTrigger>
                 <TabsTrigger value="semanas">Semana a semana</TabsTrigger>
+                <TabsTrigger value="parametros" className="gap-1"><Settings2 className="h-3.5 w-3.5" /> Parâmetros</TabsTrigger>
               </TabsList>
               <TabsContent value="cronograma" className="mt-4">
                 <CronogramaTarefas campanhaId={campanha.id} />
@@ -102,6 +104,9 @@ export default function PlanoCampanhaPage() {
               </TabsContent>
               <TabsContent value="semanas" className="mt-4">
                 <PlanejamentoSemanal campanhaId={campanha.id} />
+              </TabsContent>
+              <TabsContent value="parametros" className="mt-4">
+                <ParametrosGerador campanhaId={campanha.id} />
               </TabsContent>
             </Tabs>
           </>
