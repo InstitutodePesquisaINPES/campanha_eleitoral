@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Plus, Trash2, Phone, MapPin, UserCheck, Clock, Shield } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, Phone, MapPin, UserCheck, Clock, Shield, Search } from "lucide-react";
 import { NIVEL_FUNIL, NIVEIS_ORDENADOS, PAPEL_INFO, type NivelRelacionamento } from "@/lib/crm/classificacao";
+import { fetchCep } from "@/lib/api/viacep";
 
 const tipoContatoLabels: Record<string, string> = { celular: "Celular", fixo: "Fixo", whatsapp: "WhatsApp", email: "E-mail", instagram: "Instagram", facebook: "Facebook", twitter: "Twitter" };
 const papelLabels: Record<string, string> = Object.fromEntries(Object.entries(PAPEL_INFO).map(([k, v]) => [k, v.label]));
