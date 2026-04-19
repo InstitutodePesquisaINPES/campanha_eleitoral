@@ -12,13 +12,14 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Brain, Plus, Pencil, Trash2, Zap, Check, X, AlertCircle, ExternalLink } from "lucide-react";
 import { useAIProvedores, useAIModelos, useUpsertProvedor, useDeleteProvedor, useTestProvedor, useUpsertModelo, useDeleteModelo, useAIUsoLog } from "@/hooks/useAI";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 type ProviderType = "openai" | "anthropic" | "google" | "groq" | "mistral" | "openrouter" | "azure_openai" | "cohere" | "perplexity" | "xai" | "deepseek" | "custom";
 type ProviderStatus = "ativo" | "inativo" | "erro" | "testando";
 
 type ProviderDialogState = {
   id?: string;
-  nome?: string;
+  nome: string;
   tipo: ProviderType;
   descricao?: string | null;
   base_url: string;
@@ -31,8 +32,8 @@ type ProviderDialogState = {
 type ModelDialogState = {
   id?: string;
   provedor_id?: string | null;
-  nome?: string;
-  modelo_id?: string;
+  nome: string;
+  modelo_id: string;
   contexto_tokens: number;
   max_output_tokens: number;
   custo_input_por_1m: number;
@@ -56,7 +57,28 @@ const TIPOS = [
   { v: "azure_openai", label: "Azure OpenAI" },
   { v: "cohere", label: "Cohere" },
   { v: "custom", label: "Custom (OpenAI-compatible)" },
-];
+ ] as const;
+
+type ProviderRow = Database["public"]["Tables"]["ai_provedores"]["Row"];
+
+function jsonToHeaders(value: Json | null | undefined): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+}
+
+function toProviderDialogState(provider: ProviderRow): ProviderDialogState {
+  return {
+    id: provider.id,
+    nome: provider.nome,
+    tipo: provider.tipo as ProviderType,
+    descricao: provider.descricao,
+    base_url: provider.base_url,
+    secret_name: provider.secret_name,
+    prioridade: provider.prioridade,
+    status: provider.status as ProviderStatus,
+    headers_extra: jsonToHeaders(provider.headers_extra),
+  };
+}
 
 export function CentralIATab() {
   const { data: provedores } = useAIProvedores();
