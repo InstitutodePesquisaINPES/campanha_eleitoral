@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Target, Building2, Home, Vote, Users, Download } from "lucide-react";
+import { MapPin, Target, Building2, Home, Vote, Users, Download, BarChart3 } from "lucide-react";
 import { MunicipiosTab } from "@/components/territorial/MunicipiosTab";
 import { BairrosTab } from "@/components/territorial/BairrosTab";
 import { ZonasTab } from "@/components/territorial/ZonasTab";
@@ -9,6 +9,7 @@ import { TerritorioHeader } from "@/components/territorial/TerritorioHeader";
 import { VisaoEstrategicaTab } from "@/components/territorial/VisaoEstrategicaTab";
 import { ImportIBGETab } from "@/components/territorial/ImportIBGETab";
 import { ImportBairrosTab } from "@/components/territorial/ImportBairrosTab";
+import { DemografiaTab } from "@/components/territorial/DemografiaTab";
 
 export default function TerritoriosPage() {
   return (
@@ -35,6 +36,7 @@ export default function TerritoriosPage() {
             <TabsTrigger value="bairros"><Home className="h-3.5 w-3.5 mr-1" />Bairros</TabsTrigger>
             <TabsTrigger value="zonas"><Vote className="h-3.5 w-3.5 mr-1" />Zonas & Seções</TabsTrigger>
             <TabsTrigger value="areas"><Users className="h-3.5 w-3.5 mr-1" />Áreas de Atuação</TabsTrigger>
+            <TabsTrigger value="demografia"><BarChart3 className="h-3.5 w-3.5 mr-1" />Demografia</TabsTrigger>
             <TabsTrigger value="importar"><Download className="h-3.5 w-3.5 mr-1" />Importar</TabsTrigger>
           </TabsList>
           <TabsContent value="estrategia" className="space-y-4">
@@ -46,6 +48,7 @@ export default function TerritoriosPage() {
           <TabsContent value="bairros"><BairrosTab /></TabsContent>
           <TabsContent value="zonas"><ZonasTab /></TabsContent>
           <TabsContent value="areas"><AreasTab /></TabsContent>
+          <TabsContent value="demografia" className="space-y-4"><DemografiaTab /></TabsContent>
           <TabsContent value="importar" className="space-y-4">
             <ImportIBGETab />
             <ImportBairrosTab />
