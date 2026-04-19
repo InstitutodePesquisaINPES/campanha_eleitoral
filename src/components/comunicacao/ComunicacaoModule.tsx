@@ -8,8 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePessoas } from "@/hooks/usePessoas";
 import { useTags } from "@/hooks/usePessoas";
-import { MessageSquare, Send, Users, Filter, Copy, Check } from "lucide-react";
+import { MessageSquare, Send, Users, Filter, Copy, Check, Calendar, Library, Radio } from "lucide-react";
 import { toast } from "sonner";
+import { CalendarioEditorialTab } from "./CalendarioEditorialTab";
+import { BibliotecaPecasTab } from "./BibliotecaPecasTab";
+import { WarRoomTab } from "./WarRoomTab";
 
 const templates = [
   { id: "convite_evento", nome: "Convite para Evento", corpo: "Olá {nome}! Você está convidado(a) para {evento} no dia {data} às {hora}. Local: {local}. Contamos com sua presença!" },
@@ -20,7 +23,7 @@ const templates = [
 ];
 
 export function ComunicacaoModule() {
-  const [tab, setTab] = useState("templates");
+  const [tab, setTab] = useState("calendario");
   const { data: pessoas } = usePessoas();
   const { data: tags } = useTags();
   const [selectedTemplate, setSelectedTemplate] = useState(templates[0]);
@@ -63,10 +66,17 @@ export function ComunicacaoModule() {
       <h1 className="text-2xl font-bold">Comunicação</h1>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="calendario"><Calendar className="h-4 w-4 mr-1" />Calendário Editorial</TabsTrigger>
+          <TabsTrigger value="biblioteca"><Library className="h-4 w-4 mr-1" />Biblioteca de Peças</TabsTrigger>
+          <TabsTrigger value="warroom"><Radio className="h-4 w-4 mr-1" />War Room</TabsTrigger>
           <TabsTrigger value="templates"><MessageSquare className="h-4 w-4 mr-1" />Templates</TabsTrigger>
           <TabsTrigger value="disparar"><Send className="h-4 w-4 mr-1" />Preparar Disparo</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="calendario" className="mt-4"><CalendarioEditorialTab /></TabsContent>
+        <TabsContent value="biblioteca" className="mt-4"><BibliotecaPecasTab /></TabsContent>
+        <TabsContent value="warroom" className="mt-4"><WarRoomTab /></TabsContent>
 
         <TabsContent value="templates" className="space-y-4 mt-4">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
