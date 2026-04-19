@@ -92,10 +92,22 @@ export function PessoaDetail({ pessoaId, onBack }: { pessoaId: string; onBack: (
           )}
         </div>
         <Select value={pessoa.nivel_relacionamento} onValueChange={(v) => handleUpdateNivel(v as NivelRelacionamento)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>{Object.entries(nivelLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}</SelectContent>
+          <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {NIVEIS_ORDENADOS.map((n) => (
+              <SelectItem key={n} value={n}>
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${NIVEL_FUNIL[n].dot}`} />
+                  {NIVEL_FUNIL[n].label}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
-        <Badge variant="outline" className={nivelColors[pessoa.nivel_relacionamento] || ""}>{nivelLabels[pessoa.nivel_relacionamento]}</Badge>
+        <Badge variant="outline" className={`gap-1.5 ${NIVEL_FUNIL[pessoa.nivel_relacionamento as NivelRelacionamento].className}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${NIVEL_FUNIL[pessoa.nivel_relacionamento as NivelRelacionamento].dot}`} />
+          {NIVEL_FUNIL[pessoa.nivel_relacionamento as NivelRelacionamento].curto}
+        </Badge>
       </div>
 
       <Tabs defaultValue="contatos">
