@@ -6,7 +6,7 @@ import { TrendingUp, AlertTriangle } from "lucide-react";
 
 function scoreBadge(score: number) {
   if (score >= 60) return <Badge variant="destructive">Crítica</Badge>;
-  if (score >= 35) return <Badge className="bg-orange-500 hover:bg-orange-500/90">Alta</Badge>;
+  if (score >= 35) return <Badge variant="default">Alta</Badge>;
   if (score >= 15) return <Badge variant="secondary">Média</Badge>;
   return <Badge variant="outline">Baixa</Badge>;
 }
