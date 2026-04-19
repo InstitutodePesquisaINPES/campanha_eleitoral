@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Sparkles, Send, Plus, Settings2, Loader2, Bot, User as UserIcon } from "lucide-react";
-import { useAICopilots, useAIChat, useAIModelos, useUpsertCopilot } from "@/hooks/useAI";
+import { useAICopilots, useAIChat, useAIModelos, useUpsertCopilot, type AICopilotMutationPayload, type AICopilotWithModel } from "@/hooks/useAI";
 import { useIsAdmin } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 
 type Msg = { role: "user" | "assistant"; content: string };
+type CopilotDialogState = AICopilotMutationPayload;
 
 const CATEGORIAS = ["estrategista","analista","comunicador","juridico","financeiro","territorial","geral"];
 
@@ -26,11 +27,11 @@ export default function CopilotPage() {
   const isAdmin = useIsAdmin();
   const chat = useAIChat();
   const upsertCopilot = useUpsertCopilot();
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<AICopilotWithModel | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
-  const [editDialog, setEditDialog] = useState<any>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [editDialog, setEditDialog] = useState<CopilotDialogState | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!selected && copilots?.length) setSelected(copilots[0]);
@@ -47,10 +48,10 @@ export default function CopilotPage() {
     setMessages(newMessages);
     setInput("");
     try {
-      const res: any = await chat.mutateAsync({ copilot_id: selected.id, messages: newMessages });
+      const res = await chat.mutateAsync({ copilot_id: selected.id, messages: newMessages });
       setMessages([...newMessages, { role: "assistant", content: res.content }]);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar mensagem");
       setMessages(newMessages);
     }
   };
@@ -72,7 +73,7 @@ export default function CopilotPage() {
           </CardHeader>
           <ScrollArea className="flex-1">
             <CardContent className="space-y-1 pt-0">
-              {copilots?.map((c: any) => (
+              {copilots?.map((c) => (
                 <button key={c.id} onClick={() => setSelected(c)} className={`w-full text-left p-2.5 rounded-lg transition-colors ${selected?.id === c.id ? "bg-primary/10 border border-primary/30" : "hover:bg-muted"}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-medium text-sm truncate" style={{ color: c.cor }}>{c.nome}</div>
@@ -95,7 +96,7 @@ export default function CopilotPage() {
               {selected?.ai_modelos ? `${selected.ai_modelos.ai_provedores?.nome} / ${selected.ai_modelos.nome}` : "Sem modelo configurado — admin precisa atribuir"}
             </CardDescription>
           </CardHeader>
-          <ScrollArea className="flex-1" ref={scrollRef as any}>
+          <ScrollArea className="flex-1" ref={scrollRef}>
             <CardContent className="space-y-4 py-4">
               {messages.length === 0 && selected && (
                 <div className="text-center text-muted-foreground text-sm py-12">
@@ -147,7 +148,7 @@ export default function CopilotPage() {
                 <Select value={editDialog.modelo_id ?? ""} onValueChange={v => setEditDialog({ ...editDialog, modelo_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    {modelos?.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.ai_provedores?.nome} / {m.nome}</SelectItem>)}
+                    {modelos?.map((m) => <SelectItem key={m.id} value={m.id}>{m.ai_provedores?.nome} / {m.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
