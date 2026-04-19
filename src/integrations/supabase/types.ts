@@ -1417,51 +1417,84 @@ export type Database = {
       }
       pessoas: {
         Row: {
+          cnpj: string | null
           cpf: string | null
           created_at: string
           created_by: string | null
+          data_fundacao: string | null
           data_nascimento: string | null
           escolaridade: string | null
           full_name: string
           genero: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           meta_votos: number | null
           nivel_relacionamento: Database["public"]["Enums"]["nivel_relacionamento"]
+          nome_fantasia: string | null
           observacoes: string | null
+          porte: Database["public"]["Enums"]["porte_empresa"] | null
           proxima_acao: string | null
+          razao_social: string | null
           responsavel_area: string | null
+          responsavel_legal: string | null
+          segmento: string | null
+          site: string | null
+          tipo_pessoa: Database["public"]["Enums"]["tipo_pessoa"]
           updated_at: string
         }
         Insert: {
+          cnpj?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
+          data_fundacao?: string | null
           data_nascimento?: string | null
           escolaridade?: string | null
           full_name: string
           genero?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           meta_votos?: number | null
           nivel_relacionamento?: Database["public"]["Enums"]["nivel_relacionamento"]
+          nome_fantasia?: string | null
           observacoes?: string | null
+          porte?: Database["public"]["Enums"]["porte_empresa"] | null
           proxima_acao?: string | null
+          razao_social?: string | null
           responsavel_area?: string | null
+          responsavel_legal?: string | null
+          segmento?: string | null
+          site?: string | null
+          tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa"]
           updated_at?: string
         }
         Update: {
+          cnpj?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
+          data_fundacao?: string | null
           data_nascimento?: string | null
           escolaridade?: string | null
           full_name?: string
           genero?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           meta_votos?: number | null
           nivel_relacionamento?: Database["public"]["Enums"]["nivel_relacionamento"]
+          nome_fantasia?: string | null
           observacoes?: string | null
+          porte?: Database["public"]["Enums"]["porte_empresa"] | null
           proxima_acao?: string | null
+          razao_social?: string | null
           responsavel_area?: string | null
+          responsavel_legal?: string | null
+          segmento?: string | null
+          site?: string | null
+          tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa"]
           updated_at?: string
         }
         Relationships: []
@@ -2794,6 +2827,7 @@ export type Database = {
         | "institucional"
         | "demandante"
         | "equipe"
+      porte_empresa: "mei" | "me" | "epp" | "medio" | "grande"
       prioridade_demanda: "baixa" | "media" | "alta" | "urgente"
       status_agenda:
         | "planejado"
@@ -2853,6 +2887,7 @@ export type Database = {
         | "outros"
       tipo_movimentacao: "entrada" | "saida" | "transferencia" | "perda"
       tipo_parada: "visita" | "entrega" | "coleta"
+      tipo_pessoa: "pf" | "pj"
       tipo_receita:
         | "doacao"
         | "fundo_partidario"
@@ -3095,6 +3130,7 @@ export const Constants = {
         "demandante",
         "equipe",
       ],
+      porte_empresa: ["mei", "me", "epp", "medio", "grande"],
       prioridade_demanda: ["baixa", "media", "alta", "urgente"],
       status_agenda: [
         "planejado",
@@ -3161,6 +3197,7 @@ export const Constants = {
       ],
       tipo_movimentacao: ["entrada", "saida", "transferencia", "perda"],
       tipo_parada: ["visita", "entrega", "coleta"],
+      tipo_pessoa: ["pf", "pj"],
       tipo_receita: [
         "doacao",
         "fundo_partidario",
