@@ -1,92 +1,38 @@
+# 🎯 Plano de Conclusão SIGT — 7 Frentes
 
-## Auditoria do Sistema SIGT
+Cada frente entregue **completa, real, com UI rica, filtros e integração end-to-end**. Sem mocks.
 
-Analisei o estado atual do projeto. Aqui está o diagnóstico e o plano para deixar a área admin completa e robusta.
+## Frente 1 — Limpeza: PlaceholderPage órfão (trivial)
+- Remover import em `src/App.tsx` (linha 26) e deletar `src/pages/PlaceholderPage.tsx`.
 
-### Estado Atual
+## Frente 2 — Realtime no Comando + Notificações (médio)
+- `useNotificacoes` JÁ tem subscription ✅. Falta no Comando/Demandas.
+- Subscriptions em `demandas`, `agenda`, `campanha_tarefas`, `despesas` invalidando `indicadores-campanha`.
+- Indicador "🟢 Ao vivo" no header, badge animado nos KPIs que mudam, toast discreto na atualização, reconexão automática.
 
-**O que está pronto:**
-- 35+ tabelas no banco com RLS configurado
-- 12 módulos: CRM, Demandas, Agenda, Financeiro, Materiais, Plano 90d, BI, Mapas, Comunicação, Territorial, Documentos, Campo
-- Auth + RBAC (5 papéis) + audit_logs
-- Admin parcial: Stats, Users, Tags, Centros Custo, Export, Audit (6 abas)
+## Frente 3 — Workflow de Aprovação de Contratos (alto)
+Migration: tabelas `contrato_aprovacoes`, `contrato_workflow_template`, enum `contrato_aprovacao_status`. Trigger exige todas etapas aprovadas para vigência. Função `criar_aprovacoes_contrato`.
+Regras por valor: <5k → 1 etapa; 5k–50k → 2; >50k → 3 com observação obrigatória.
+UI `ContratoAprovacaoPanel`: stepper visual, cards por etapa com aprovador/papel, botões Aprovar/Rejeitar/Revisão, timeline, RLS por papel, notificações automáticas, dashboard "Pendentes minhas aprovações".
 
-**Gaps críticos da área Admin:**
-1. **Sem CRUD de Campanhas** — coração do sistema, hoje só editável via SQL
-2. **Sem gestão de Estados/Municípios/Bairros** centralizada
-3. **Auditoria fraca** — sem filtros, sem busca, sem detalhes do diff (old/new data)
-4. **Stats sem gráficos** — só números secos, sem evolução temporal
-5. **Sem painel de Saúde do Sistema** — storage, RLS, contagens órfãs
-6. **Sem configurações globais** — parâmetros de SLA, branding, defaults
-7. **Sem gestão de convites** — criar usuário só via seed
-8. **Export sem filtros** — baixa tudo, sem range de datas
+## Frente 4 — Mapas Avançados (alto)
+Deps: `leaflet.markercluster`, `leaflet.heat`.
+Camadas (toggle + opacidade): cluster pessoas, heatmap demandas, choropleth densidade eleitoral, isócronas OSRM, polígonos áreas atuação, eventos futuros, urbano vs rural.
+Painel lateral colapsável, filtros (município/bairro/classificação/período), legenda dinâmica, exportar PNG, mini-mapa.
 
-### Plano de Implementação
+## Frente 5 — Exportação BI PDF/PNG (médio)
+Deps: `html2canvas`, `jspdf`. Hook `useExportBI(ref)`. Dropdown PNG | PDF | PDF c/ filtros. PDF com capa+sumário+gráficos A4. Salva em Storage `relatorios-bi/` com link assinado 7d.
 
-**1. Reformular Admin com 9 abas robustas**
-```
-Dashboard | Usuários | Campanhas | Territórios | Tags | Centros Custo | Configurações | Auditoria | Exportação
-```
+## Frente 6 — Dados IBGE Bahia + OSM (muito alto)
+Schema: campos demográficos em `municipios` (populacao_2022, idh, urbano_pct, área), tabela `municipio_demografia` (faixa etária × sexo × ano), enriquecimento `bairros` (zona urbana/rural/mista, populacao_estimada, geometria, osm_id).
+3 edge functions:
+- `ibge-import-municipios-ba`: API IBGE Localidades + SIDRA tabelas 4709/9514/1378. Idempotente.
+- `osm-import-bairros-ba`: Overpass API por município, classifica zona pela tag `place=`, estima população por área. Rate limit 1req/2s.
+- `ibge-orchestrator`: cron mensal via pg_cron.
+UI: `IBGEImportPanel` em Admin (status, botão importar, log) + `DemografiaTab` em Territórios (pirâmide etária Recharts, choropleth densidade, comparador de municípios, top 10, donut urbano/rural).
 
-**2. Novos componentes admin**
+## Frente 7 — Testes Essenciais (médio)
+15 testes: 8 hooks, 4 edge functions, 3 componentes. Helpers em `src/test/factories.ts`.
 
-| Componente | Função |
-|---|---|
-| `DashboardTab.tsx` | KPIs + gráfico evolução 30d (pessoas/demandas/eventos) + alertas de saúde |
-| `CampanhasTab.tsx` | CRUD campanhas + botão "Gerar Plano 90 dias" + ativar/desativar |
-| `TerritoriosAdminTab.tsx` | Importar municípios IBGE, editar bairros em massa, classificação |
-| `ConfiguracoesTab.tsx` | SLA por prioridade, nome da organização, logo, cores, defaults |
-| `ConvidarUsuarioDialog.tsx` | Criar usuário via edge function (admin-create-user) com email + papel |
-| `AuditDetailDialog.tsx` | Mostrar diff JSON old vs new com syntax highlight |
-
-**3. Melhorias nos componentes existentes**
-- `AuditTab`: filtros (tabela, ação, usuário, data) + paginação + clicar abre diff
-- `ExportTab`: range de datas + escolher colunas + formato JSON além de CSV
-- `StatsTab`: virar parte do Dashboard com gráficos (recharts já instalado)
-- `UsersTab`: botão "Convidar usuário", desativar usuário, ver últimos logins
-
-**4. Backend (migrations + edge functions)**
-- Tabela `system_settings` (chave/valor JSON, singleton) com RLS admin-only
-- Edge function `admin-create-user` (usa service_role para criar + atribuir papel)
-- Edge function `admin-system-health` (conta órfãos, storage usado, RLS check)
-- View `v_admin_stats_30d` para evolução diária
-
-**5. Navegação**
-- Adicionar badge "Admin" no sidebar para usuários admin
-- Atalhos rápidos no Dashboard ("Criar campanha", "Convidar usuário", "Ver auditoria hoje")
-
-### Estrutura técnica
-
-```
-src/
-├── pages/admin/AdminPage.tsx          (9 abas)
-├── components/admin/
-│   ├── DashboardTab.tsx               (NEW)
-│   ├── CampanhasTab.tsx               (NEW)
-│   ├── TerritoriosAdminTab.tsx        (NEW)
-│   ├── ConfiguracoesTab.tsx           (NEW)
-│   ├── ConvidarUsuarioDialog.tsx      (NEW)
-│   ├── AuditDetailDialog.tsx          (NEW)
-│   ├── SystemHealthCard.tsx           (NEW)
-│   ├── StatsTab.tsx                   (refactor → DashboardTab)
-│   ├── UsersTab.tsx                   (+ convite, + desativar)
-│   ├── AuditTab.tsx                   (+ filtros, + diff)
-│   └── ExportTab.tsx                  (+ filtros de data)
-└── hooks/useSystemSettings.ts         (NEW)
-
-supabase/
-├── migrations/                        (system_settings + view stats 30d)
-└── functions/
-    ├── admin-create-user/             (NEW)
-    └── admin-system-health/           (NEW)
-```
-
-### Entregáveis
-- Admin com 9 abas funcionais e robustas
-- 2 edge functions seguras (verificam papel admin)
-- 1 nova tabela + 1 view para métricas
-- Auditoria com diff visual completo
-- Convite de usuário funcionando end-to-end
-- Dashboard com gráficos de evolução
-
-Tempo estimado: 1 ciclo de implementação completo.
+## Ordem de execução
+1. Limpeza placeholder → 2. Realtime Comando → 3. Migrations (IBGE/OSM/contratos) → 4. Workflow contratos UI → 5. Edge functions IBGE/OSM → 6. Mapas avançados → 7. Exportação BI → 8. Painel IBGE + Demografia → 9. Testes.
