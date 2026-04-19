@@ -21,6 +21,9 @@ type ProviderName = Pick<AIProviderRow, "nome">;
 export type AIProviderPayload = AIProviderInsert | (AIProviderUpdate & { id: string });
 export type AIModelPayload = AIModelInsert | (AIModelUpdate & { id: string });
 export type AICopilotPayload = AICopilotInsert | (AICopilotUpdate & { id: string });
+export type AIProviderMutationPayload = AIProviderInsert & { id?: string };
+export type AIModelMutationPayload = AIModelInsert & { id?: string };
+export type AICopilotMutationPayload = AICopilotInsert & { id?: string };
 
 export type AIModelWithProvider = AIModelRow & {
   ai_provedores: ProviderSummary | null;
@@ -102,9 +105,9 @@ export function useAICopilots() {
 export function useUpsertProvedor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: AIProviderPayload) => {
+    mutationFn: async (p: AIProviderMutationPayload) => {
       const { error } = "id" in p && p.id
-        ? await supabase.from("ai_provedores").update(p).eq("id", p.id)
+        ? await supabase.from("ai_provedores").update(p as AIProviderUpdate).eq("id", p.id)
         : await supabase.from("ai_provedores").insert(p as AIProviderInsert);
       if (error) throw error;
     },
@@ -145,9 +148,9 @@ export function useTestProvedor() {
 export function useUpsertModelo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (m: AIModelPayload) => {
+    mutationFn: async (m: AIModelMutationPayload) => {
       const { error } = "id" in m && m.id
-        ? await supabase.from("ai_modelos").update(m).eq("id", m.id)
+        ? await supabase.from("ai_modelos").update(m as AIModelUpdate).eq("id", m.id)
         : await supabase.from("ai_modelos").insert(m as AIModelInsert);
       if (error) throw error;
     },
@@ -171,9 +174,9 @@ export function useDeleteModelo() {
 export function useUpsertCopilot() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (c: AICopilotPayload) => {
+    mutationFn: async (c: AICopilotMutationPayload) => {
       const { error } = "id" in c && c.id
-        ? await supabase.from("ai_copilots").update(c).eq("id", c.id)
+        ? await supabase.from("ai_copilots").update(c as AICopilotUpdate).eq("id", c.id)
         : await supabase.from("ai_copilots").insert(c as AICopilotInsert);
       if (error) throw error;
     },
