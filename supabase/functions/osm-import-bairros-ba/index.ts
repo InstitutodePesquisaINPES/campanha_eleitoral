@@ -1,7 +1,5 @@
 // Edge Function: osm-import-bairros-ba
-// Importa bairros (place=neighbourhood/suburb/quarter/village/hamlet) via Overpass API
-// para todos municípios da Bahia. Classifica zona urbano/rural pelo tag `place=`.
-// Rate limit: 1 request a cada 2s para respeitar Overpass.
+// Importa bairros via Overpass API. Modo single (síncrono) ou bulk (background).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -12,28 +10,124 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
 const URBANO_TAGS = ["neighbourhood", "suburb", "quarter", "city_block", "town"];
 const RURAL_TAGS = ["village", "hamlet", "isolated_dwelling", "farm"];
 
-async function overpassQuery(query: string, retries = 3): Promise<any> {
+async function overpassQuery(query: string, retries = 2): Promise<any> {
   for (let i = 0; i < retries; i++) {
     try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 30000);
       const res = await fetch(OVERPASS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain", "User-Agent": "SIGT/1.0" },
         body: query,
+        signal: ctrl.signal,
       });
-      if (res.status === 429 || res.status === 504) throw new Error(`Rate limited (${res.status})`);
-      if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
+      clearTimeout(t);
+      if (res.status === 429 || res.status === 504) throw new Error(`Rate ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (e) {
       if (i === retries - 1) throw e;
-      await new Promise((r) => setTimeout(r, 5000 * (i + 1)));
+      await new Promise((r) => setTimeout(r, 3000 * (i + 1)));
     }
   }
+}
+
+async function processMunicipio(supabase: any, mun: { id: string; nome: string }) {
+  const query = `
+    [out:json][timeout:45];
+    area["name"="${mun.nome.replace(/"/g, '\\"')}"]["admin_level"="8"]->.a;
+    (
+      node(area.a)["place"];
+      relation(area.a)["place"];
+    );
+    out center tags;
+  `;
+  const result = await overpassQuery(query);
+  const elements = result?.elements || [];
+  let inseridos = 0, atualizados = 0;
+
+  for (const el of elements) {
+    const tag = el.tags?.place;
+    const nome = el.tags?.name;
+    if (!nome || !tag) continue;
+
+    const zona: "urbano" | "rural" | "misto" =
+      URBANO_TAGS.includes(tag) ? "urbano" :
+      RURAL_TAGS.includes(tag) ? "rural" : "misto";
+
+    const lat = el.lat || el.center?.lat;
+    const lon = el.lon || el.center?.lon;
+
+    const { data: existing } = await supabase
+      .from("bairros")
+      .select("id")
+      .eq("municipio_id", mun.id)
+      .ilike("nome", nome)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("bairros").update({
+        latitude: lat, longitude: lon, zona_tipo: zona,
+        osm_id: el.id, osm_atualizado_em: new Date().toISOString(),
+      }).eq("id", existing.id);
+      atualizados++;
+    } else {
+      await supabase.from("bairros").insert({
+        municipio_id: mun.id, nome, latitude: lat, longitude: lon,
+        zona_tipo: zona, osm_id: el.id, osm_atualizado_em: new Date().toISOString(),
+      });
+      inseridos++;
+    }
+  }
+  return { inseridos, atualizados, total: elements.length };
+}
+
+async function processBulk(jobId: string) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data: municipios = [] } = await supabase
+    .from("municipios")
+    .select("id, nome")
+    .order("nome");
+
+  const list = municipios || [];
+  let processados = 0, inseridos = 0, atualizados = 0;
+  const erros: string[] = [];
+
+  for (const mun of list) {
+    try {
+      const r = await processMunicipio(supabase, mun as any);
+      inseridos += r.inseridos;
+      atualizados += r.atualizados;
+      processados++;
+    } catch (e: any) {
+      erros.push(`${(mun as any).nome}: ${e.message}`);
+    }
+    // Rate limit 1.5s entre municípios (Overpass)
+    await new Promise((r) => setTimeout(r, 1500));
+
+    if (processados % 5 === 0) {
+      await supabase.from("dados_externos_jobs").update({
+        total_processados: processados,
+        total_inseridos: inseridos,
+        total_atualizados: atualizados,
+      }).eq("id", jobId);
+    }
+  }
+
+  await supabase.from("dados_externos_jobs").update({
+    status: erros.length > 0 ? (processados > 0 ? "parcial" : "erro") : "sucesso",
+    total_processados: processados,
+    total_inseridos: inseridos,
+    total_atualizados: atualizados,
+    concluido_em: new Date().toISOString(),
+    erro: erros.slice(0, 10).join("; ") || null,
+  }).eq("id", jobId);
 }
 
 Deno.serve(async (req) => {
@@ -42,117 +136,54 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const { municipio_id } = await req.json().catch(() => ({}));
 
-  const { data: job } = await supabase
-    .from("dados_externos_jobs")
-    .insert({
-      fonte: "OSM",
-      tipo: "bairros",
-      uf: "BA",
-      municipio_id: municipio_id || null,
-      status: "rodando",
-      iniciado_em: new Date().toISOString(),
-    })
-    .select()
-    .single();
+  // ============ SINGLE — síncrono ============
+  if (municipio_id) {
+    const { data: job } = await supabase.from("dados_externos_jobs").insert({
+      fonte: "OSM", tipo: "bairros_single", uf: "BA", municipio_id,
+      status: "rodando", iniciado_em: new Date().toISOString(),
+    }).select().single();
 
-  let processados = 0, inseridos = 0, atualizados = 0;
-  const erros: string[] = [];
+    try {
+      const { data: mun } = await supabase
+        .from("municipios").select("id, nome").eq("id", municipio_id).single();
+      if (!mun) throw new Error("Município não encontrado");
 
-  try {
-    // Lista municípios alvo
-    let q = supabase.from("municipios").select("id, nome").order("nome");
-    if (municipio_id) q = q.eq("id", municipio_id);
-    const { data: municipios = [] } = await q;
+      const r = await processMunicipio(supabase, mun as any);
 
-    for (const mun of municipios!) {
-      try {
-        const query = `
-          [out:json][timeout:60];
-          area["name"="${mun.nome.replace(/"/g, '\\"')}"]["admin_level"="8"]->.a;
-          (
-            node(area.a)["place"];
-            relation(area.a)["place"];
-          );
-          out center tags;
-        `;
-        const result = await overpassQuery(query);
-        const elements = result?.elements || [];
+      await supabase.from("dados_externos_jobs").update({
+        status: "sucesso",
+        total_processados: r.total,
+        total_inseridos: r.inseridos,
+        total_atualizados: r.atualizados,
+        concluido_em: new Date().toISOString(),
+      }).eq("id", job!.id);
 
-        for (const el of elements) {
-          const tag = el.tags?.place;
-          const nome = el.tags?.name;
-          if (!nome || !tag) continue;
-
-          const zona: "urbano" | "rural" | "misto" =
-            URBANO_TAGS.includes(tag) ? "urbano" :
-            RURAL_TAGS.includes(tag) ? "rural" : "misto";
-
-          const lat = el.lat || el.center?.lat;
-          const lon = el.lon || el.center?.lon;
-
-          // Upsert por (municipio, nome)
-          const { data: existing } = await supabase
-            .from("bairros")
-            .select("id")
-            .eq("municipio_id", mun.id)
-            .ilike("nome", nome)
-            .limit(1)
-            .maybeSingle();
-
-          if (existing) {
-            await supabase.from("bairros").update({
-              latitude: lat,
-              longitude: lon,
-              zona_tipo: zona,
-              osm_id: el.id,
-              osm_atualizado_em: new Date().toISOString(),
-            }).eq("id", existing.id);
-            atualizados++;
-          } else {
-            await supabase.from("bairros").insert({
-              municipio_id: mun.id,
-              nome,
-              latitude: lat,
-              longitude: lon,
-              zona_tipo: zona,
-              osm_id: el.id,
-              osm_atualizado_em: new Date().toISOString(),
-            });
-            inseridos++;
-          }
-          processados++;
-        }
-
-        // Rate limit: 1 req / 2s
-        await new Promise((r) => setTimeout(r, 2000));
-      } catch (e: any) {
-        erros.push(`${mun.nome}: ${e.message}`);
-        await new Promise((r) => setTimeout(r, 5000));
-      }
+      return new Response(JSON.stringify({ ok: true, modo: "single", ...r, municipio: (mun as any).nome }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (e: any) {
+      await supabase.from("dados_externos_jobs").update({
+        status: "erro", erro: e.message, concluido_em: new Date().toISOString(),
+      }).eq("id", job!.id);
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
-    await supabase.from("dados_externos_jobs").update({
-      status: erros.length > 0 ? "parcial" : "sucesso",
-      total_processados: processados,
-      total_inseridos: inseridos,
-      total_atualizados: atualizados,
-      concluido_em: new Date().toISOString(),
-      erro: erros.slice(0, 10).join("; ") || null,
-    }).eq("id", job!.id);
-
-    return new Response(
-      JSON.stringify({ ok: true, processados, inseridos, atualizados, erros: erros.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (e: any) {
-    await supabase.from("dados_externos_jobs").update({
-      status: "erro",
-      erro: e.message,
-      concluido_em: new Date().toISOString(),
-    }).eq("id", job!.id);
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   }
+
+  // ============ BULK — background ============
+  const { data: job } = await supabase.from("dados_externos_jobs").insert({
+    fonte: "OSM", tipo: "bairros", uf: "BA",
+    status: "rodando", iniciado_em: new Date().toISOString(),
+  }).select().single();
+
+  // @ts-ignore
+  EdgeRuntime.waitUntil(processBulk(job!.id));
+
+  return new Response(
+    JSON.stringify({
+      ok: true, modo: "bulk_background", job_id: job!.id,
+      mensagem: "Importação OSM iniciada em background. Acompanhe pelo Histórico.",
+    }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
 });
