@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,119 +6,153 @@
 
 @layer base {
   :root {
-    /* Executive Light SaaS Theme */
-    --background: 210 25% 98%;
-    --foreground: 222 47% 11%;
+    /* ========================================================
+       AVANTE BRAND — Azul institucional + Amarelo solar
+       Campanha Kiribamba · Deputado Estadual BA · Nº 70
+       ======================================================== */
+    --background: 210 30% 98%;
+    --foreground: 220 60% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 60% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 60% 10%;
 
-    --primary: 221 83% 53%;
+    /* Azul Avante: #003DA5 → HSL ~217° 100% 32% */
+    --primary: 217 100% 32%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 91% 65%;
+    --primary-glow: 217 92% 46%;
+    --primary-deep: 220 100% 22%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 220 18% 96%;
+    --secondary-foreground: 220 60% 10%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 220 16% 96%;
+    --muted-foreground: 220 12% 42%;
 
-    --accent: 221 83% 96%;
-    --accent-foreground: 221 83% 30%;
+    --accent: 217 100% 95%;
+    --accent-foreground: 217 100% 28%;
 
-    --destructive: 0 72% 51%;
+    /* Amarelo Avante: #FFD100 → HSL ~49° 100% 50% */
+    --brand-yellow: 49 100% 50%;
+    --brand-yellow-foreground: 220 60% 10%;
+    --brand-yellow-deep: 43 100% 42%;
+
+    --destructive: 0 78% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
+    --success: 142 71% 38%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning: 38 95% 48%;
+    --warning-foreground: 220 60% 10%;
 
-    --info: 199 89% 48%;
+    --info: 199 89% 44%;
     --info-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 221 83% 53%;
+    --border: 220 16% 89%;
+    --input: 220 16% 89%;
+    --ring: 217 100% 32%;
 
     --radius: 0.625rem;
 
-    /* Light executive sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 20%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 83% 96%;
-    --sidebar-accent-foreground: 221 83% 30%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 221 83% 53%;
+    /* Sidebar — barra escura institucional */
+    --sidebar-background: 220 60% 10%;
+    --sidebar-foreground: 210 30% 92%;
+    --sidebar-primary: 49 100% 50%;
+    --sidebar-primary-foreground: 220 60% 10%;
+    --sidebar-accent: 220 50% 16%;
+    --sidebar-accent-foreground: 49 100% 50%;
+    --sidebar-border: 220 40% 18%;
+    --sidebar-ring: 49 100% 50%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%), hsl(217 91% 65%));
-    --gradient-subtle: linear-gradient(180deg, hsl(210 25% 98%), hsl(220 14% 96%));
-    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.04);
-    --shadow-md: 0 4px 12px -2px hsl(222 47% 11% / 0.06);
-    --shadow-lg: 0 10px 30px -10px hsl(221 83% 53% / 0.15);
+    /* Gradientes e sombras de marca */
+    --gradient-brand: linear-gradient(135deg, hsl(220 100% 22%) 0%, hsl(217 100% 32%) 50%, hsl(217 92% 46%) 100%);
+    --gradient-yellow: linear-gradient(135deg, hsl(43 100% 50%), hsl(49 100% 56%));
+    --gradient-hero: linear-gradient(120deg, hsl(220 100% 22%) 0%, hsl(217 100% 32%) 60%, hsl(43 100% 50%) 130%);
+    --gradient-subtle: linear-gradient(180deg, hsl(210 30% 99%), hsl(220 18% 95%));
+    --shadow-sm: 0 1px 2px 0 hsl(220 60% 10% / 0.04);
+    --shadow-md: 0 4px 14px -2px hsl(217 100% 32% / 0.10);
+    --shadow-lg: 0 18px 40px -14px hsl(217 100% 32% / 0.28);
+    --shadow-yellow: 0 8px 22px -8px hsl(49 100% 50% / 0.55);
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 95%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 95%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 95%;
-    --primary: 217 91% 60%;
+    --background: 220 60% 6%;
+    --foreground: 210 30% 95%;
+    --card: 220 50% 9%;
+    --card-foreground: 210 30% 95%;
+    --popover: 220 50% 9%;
+    --popover-foreground: 210 30% 95%;
+    --primary: 217 92% 56%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 91% 70%;
-    --secondary: 222 30% 16%;
-    --secondary-foreground: 210 40% 95%;
-    --muted: 222 30% 14%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 222 47% 16%;
-    --accent-foreground: 217 91% 75%;
-    --destructive: 0 63% 45%;
+    --primary-glow: 217 92% 68%;
+    --primary-deep: 217 92% 38%;
+    --secondary: 220 40% 16%;
+    --secondary-foreground: 210 30% 95%;
+    --muted: 220 40% 13%;
+    --muted-foreground: 215 18% 65%;
+    --accent: 220 50% 16%;
+    --accent-foreground: 49 100% 60%;
+    --brand-yellow: 49 100% 56%;
+    --brand-yellow-foreground: 220 60% 8%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 40%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 100%;
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
-    --ring: 217 91% 60%;
-    --sidebar-background: 222 47% 5%;
-    --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 12%;
-    --sidebar-accent-foreground: 210 40% 95%;
-    --sidebar-border: 222 30% 14%;
-    --sidebar-ring: 217 91% 60%;
+    --success: 142 65% 44%;
+    --warning: 38 95% 54%;
+    --warning-foreground: 220 60% 8%;
+    --info: 199 89% 52%;
+    --border: 220 40% 18%;
+    --input: 220 40% 18%;
+    --ring: 217 92% 56%;
+    --sidebar-background: 220 70% 5%;
+    --sidebar-foreground: 210 30% 90%;
+    --sidebar-primary: 49 100% 56%;
+    --sidebar-primary-foreground: 220 70% 5%;
+    --sidebar-accent: 220 50% 12%;
+    --sidebar-accent-foreground: 49 100% 60%;
+    --sidebar-border: 220 40% 14%;
+    --sidebar-ring: 49 100% 56%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
+  * { @apply border-border; }
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-
   body {
     @apply bg-background text-foreground;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
-
   h1, h2, h3, h4 {
     @apply tracking-tight;
+    font-family: 'Sora', 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+  }
+}
+
+@layer components {
+  .brand-gradient { background: var(--gradient-brand); }
+  .brand-yellow-gradient { background: var(--gradient-yellow); }
+  .hero-gradient { background: var(--gradient-hero); }
+  .brand-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider;
+    background: hsl(var(--brand-yellow));
+    color: hsl(var(--brand-yellow-foreground));
+    box-shadow: var(--shadow-yellow);
+  }
+  .brand-number {
+    @apply inline-flex items-center justify-center rounded-md font-black tabular-nums;
+    background: hsl(var(--brand-yellow));
+    color: hsl(var(--brand-yellow-foreground));
+    font-family: 'Sora', sans-serif;
+  }
+  .stenio-quote {
+    @apply relative pl-4 border-l-4 italic text-sm text-muted-foreground;
+    border-color: hsl(var(--brand-yellow));
   }
 }

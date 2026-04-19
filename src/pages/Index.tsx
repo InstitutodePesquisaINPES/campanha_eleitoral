@@ -1,9 +1,10 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useProfile } from "@/hooks/useProfile";
-import { useUserRoles } from "@/hooks/useUserRoles";
+import { CampanhaHero } from "@/components/brand/CampanhaHero";
+import { ConsultorBriefing } from "@/components/brand/ConsultorBriefing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Users, ClipboardList, Calendar, Shield, TrendingUp, Package, DollarSign } from "lucide-react";
+import { MapPin, Users, ClipboardList, Calendar, TrendingUp, Package, Vote } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -65,12 +66,12 @@ function useUrgentDemandas() {
 }
 
 const cards = [
-  { key: "municipios", label: "Municípios", icon: MapPin, href: "/territorios", tone: "text-info" },
-  { key: "pessoas", label: "Pessoas (CRM)", icon: Users, href: "/pessoas", tone: "text-success" },
-  { key: "demandasAbertas", label: "Demandas Abertas", icon: ClipboardList, href: "/demandas", tone: "text-warning" },
-  { key: "agenda", label: "Próximos Eventos", icon: Calendar, href: "/agenda", tone: "text-primary" },
-  { key: "materiais", label: "Materiais Ativos", icon: Package, href: "/materiais", tone: "text-info" },
-  { key: "demandas", label: "Total Demandas", icon: TrendingUp, href: "/bi", tone: "text-success" },
+  { key: "municipios", label: "Municípios mapeados", icon: MapPin, href: "/territorios", tone: "text-info" },
+  { key: "pessoas", label: "Eleitores no CRM", icon: Users, href: "/pessoas", tone: "text-success" },
+  { key: "demandasAbertas", label: "Demandas ativas", icon: ClipboardList, href: "/demandas", tone: "text-warning" },
+  { key: "agenda", label: "Agenda futura", icon: Calendar, href: "/agenda", tone: "text-primary" },
+  { key: "materiais", label: "Materiais ativos", icon: Package, href: "/materiais", tone: "text-info" },
+  { key: "demandas", label: "Histórico demandas", icon: TrendingUp, href: "/bi", tone: "text-success" },
 ] as const;
 
 const prioridadeColor: Record<string, string> = {
@@ -82,7 +83,6 @@ const prioridadeColor: Record<string, string> = {
 
 export default function Index() {
   const { data: profile } = useProfile();
-  const { data: roles = [] } = useUserRoles();
   const { data: stats, isLoading } = useDashboardStats();
   const { data: agenda = [] } = useUpcomingAgenda();
   const { data: urgentes = [] } = useUrgentDemandas();
@@ -90,51 +90,55 @@ export default function Index() {
   return (
     <AppLayout>
       <div className="space-y-6 max-w-[1400px] mx-auto">
+        {/* HERO institucional da campanha */}
+        <CampanhaHero />
+
+        {/* Saudação executiva */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Olá, {profile?.full_name?.split(" ")[0] || "Usuário"}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Painel executivo · Sistema Integrado de Gestão Territorial
+            <h2 className="text-xl font-bold">
+              Bom trabalho, {profile?.full_name?.split(" ")[0] || "comandante"} 👊
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Painel executivo · Comitê Kiribamba · Avante Sudoeste BA
             </p>
           </div>
-          {roles.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {roles.map((role) => (
-                <Badge key={role} variant="outline" className="gap-1 capitalize">
-                  <Shield className="h-3 w-3" />
-                  {role}
-                </Badge>
+          <div className="flex gap-2">
+            <Link to="/plano"><Badge className="brand-yellow-gradient text-foreground hover:opacity-90 cursor-pointer gap-1"><Vote className="h-3 w-3" />Plano 90 dias</Badge></Link>
+          </div>
+        </div>
+
+        {/* Briefing do Stenio + KPIs */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <ConsultorBriefing />
+          </div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              {cards.map((c) => (
+                <Link key={c.key} to={c.href}>
+                  <Card className="hover:shadow-md hover:border-primary/40 transition-all cursor-pointer h-full">
+                    <CardContent className="p-3">
+                      <c.icon className={`h-4 w-4 ${c.tone} mb-1`} />
+                      <div className="text-xl font-bold">
+                        {isLoading ? <Skeleton className="h-6 w-12" /> : (stats?.[c.key] ?? 0).toLocaleString("pt-BR")}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">{c.label}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {cards.map((c) => (
-            <Link key={c.key} to={c.href}>
-              <Card className="hover:shadow-md hover:border-primary/30 transition-all cursor-pointer h-full">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <c.icon className={`h-4 w-4 ${c.tone}`} />
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {isLoading ? <Skeleton className="h-7 w-12" /> : (stats?.[c.key] ?? 0).toLocaleString("pt-BR")}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{c.label}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-
+        {/* Agenda + Demandas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Calendar className="h-4 w-4 text-primary" />
-                Próximos Eventos
+                Próximos eventos
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -163,7 +167,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <ClipboardList className="h-4 w-4 text-warning" />
-                Demandas Prioritárias
+                Demandas prioritárias
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">

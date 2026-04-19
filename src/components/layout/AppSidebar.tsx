@@ -129,13 +129,15 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-            S
+          <div className="brand-number flex h-10 w-10 items-center justify-center rounded-lg text-base shadow-md">
+            70
           </div>
           {!collapsed && (
-            <div>
-              <h2 className="text-sm font-bold text-sidebar-foreground">SIGT</h2>
-              <p className="text-[10px] text-sidebar-foreground/60">Gestão Territorial</p>
+            <div className="min-w-0">
+              <h2 className="text-sm font-extrabold text-sidebar-foreground leading-tight" style={{ fontFamily: "'Sora', sans-serif" }}>KIRIBAMBA</h2>
+              <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/70 font-semibold">
+                Avante · Dep. Estadual
+              </p>
             </div>
           )}
         </div>

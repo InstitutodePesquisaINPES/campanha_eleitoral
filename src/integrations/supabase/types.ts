@@ -2705,6 +2705,7 @@ export type Database = {
         Args: { _campanha_id: string }
         Returns: string
       }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role:
@@ -2731,6 +2732,7 @@ export type Database = {
         | "senador"
         | "governador"
         | "presidente"
+        | "vice_governador"
       categoria_demanda:
         | "saude"
         | "educacao"
@@ -3022,6 +3024,7 @@ export const Constants = {
         "senador",
         "governador",
         "presidente",
+        "vice_governador",
       ],
       categoria_demanda: [
         "saude",
