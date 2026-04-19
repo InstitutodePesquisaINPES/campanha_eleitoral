@@ -52,8 +52,8 @@ export function GlobalSearch() {
     queryKey: ["busca-global", q],
     queryFn: async () => {
       if (q.trim().length < 2) return [] as ResultadoBusca[];
-      const { data, error } = await supabase
-        .from("v_busca_global" as any)
+      const { data, error } = await (supabase as any)
+        .from("v_busca_global")
         .select("*")
         .ilike("titulo", `%${q}%`)
         .limit(30);
