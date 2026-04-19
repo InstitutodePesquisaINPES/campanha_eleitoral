@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Plus, Trash2, Phone, MapPin, UserCheck, Clock, Shield } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, Phone, MapPin, UserCheck, Clock, Shield, Search } from "lucide-react";
 import { NIVEL_FUNIL, NIVEIS_ORDENADOS, PAPEL_INFO, type NivelRelacionamento } from "@/lib/crm/classificacao";
+import { fetchCep } from "@/lib/api/viacep";
 
 const tipoContatoLabels: Record<string, string> = { celular: "Celular", fixo: "Fixo", whatsapp: "WhatsApp", email: "E-mail", instagram: "Instagram", facebook: "Facebook", twitter: "Twitter" };
 const papelLabels: Record<string, string> = Object.fromEntries(Object.entries(PAPEL_INFO).map(([k, v]) => [k, v.label]));
@@ -46,10 +47,29 @@ export function PessoaDetail({ pessoaId, onBack }: { pessoaId: string; onBack: (
   // Consentimento form
   const [lgpdForm, setLgpdForm] = useState({ finalidade: "comunicacao_politica" as any, consentido: true, canal_coleta: "" });
   // Endereço form
-  const [eForm, setEForm] = useState({ logradouro: "", numero: "", cep: "", municipio_id: "", bairro_id: "", tipo: "residencial" as any });
+  const [eForm, setEForm] = useState({ logradouro: "", numero: "", complemento: "", cep: "", municipio_id: "", bairro_id: "", tipo: "residencial" as any });
+  const [cepLoading, setCepLoading] = useState(false);
 
   const { data: municipios = [] } = useMunicipios();
   const { data: bairros = [] } = useBairros(eForm.municipio_id || undefined);
+
+  const handleCepLookup = async () => {
+    const clean = eForm.cep.replace(/\D/g, "");
+    if (clean.length !== 8) { toast({ variant: "destructive", description: "CEP precisa ter 8 dígitos." }); return; }
+    setCepLoading(true);
+    try {
+      const data = await fetchCep(clean);
+      if (!data) { toast({ variant: "destructive", description: "CEP não encontrado." }); return; }
+      const mun = municipios.find((m: any) => m.nome.toLowerCase() === data.localidade.toLowerCase());
+      const munId = mun?.id || "";
+      const bairrosDoMun = munId ? (await import("@/integrations/supabase/client")).supabase.from("bairros").select("id, nome").eq("municipio_id", munId) : null;
+      const bairroData = bairrosDoMun ? (await bairrosDoMun).data || [] : [];
+      const bai = bairroData.find((b: any) => b.nome.toLowerCase() === data.bairro.toLowerCase());
+      setEForm((prev) => ({ ...prev, logradouro: data.logradouro || prev.logradouro, complemento: data.complemento || prev.complemento, municipio_id: munId || prev.municipio_id, bairro_id: bai?.id || "" }));
+      toast({ title: "Endereço preenchido!", description: mun ? "Município localizado." : "Município não cadastrado — selecione manualmente." });
+    } catch (e: any) { toast({ variant: "destructive", description: e.message }); }
+    finally { setCepLoading(false); }
+  };
 
   if (isLoading || !pessoa) {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -168,16 +188,30 @@ export function PessoaDetail({ pessoaId, onBack }: { pessoaId: string; onBack: (
                 </Select>
               </div>
               <div className="flex gap-2">
+                <Input className="w-32" placeholder="CEP" value={eForm.cep} onChange={(e) => setEForm({ ...eForm, cep: e.target.value })} onBlur={() => { if (eForm.cep.replace(/\D/g, "").length === 8) handleCepLookup(); }} />
+                <Button size="sm" variant="outline" onClick={handleCepLookup} disabled={cepLoading}>
+                  {cepLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
                 <Input className="flex-1" placeholder="Logradouro" value={eForm.logradouro} onChange={(e) => setEForm({ ...eForm, logradouro: e.target.value })} />
                 <Input className="w-20" placeholder="Nº" value={eForm.numero} onChange={(e) => setEForm({ ...eForm, numero: e.target.value })} />
-                <Input className="w-28" placeholder="CEP" value={eForm.cep} onChange={(e) => setEForm({ ...eForm, cep: e.target.value })} />
+              </div>
+              <div className="flex gap-2">
+                <Input className="flex-1" placeholder="Complemento (opcional)" value={eForm.complemento} onChange={(e) => setEForm({ ...eForm, complemento: e.target.value })} />
+                <Select value={eForm.tipo} onValueChange={(v) => setEForm({ ...eForm, tipo: v })}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="residencial">Residencial</SelectItem>
+                    <SelectItem value="comercial">Comercial</SelectItem>
+                    <SelectItem value="referencia">Referência</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button size="sm" onClick={async () => {
                   try {
-                    await createEndereco.mutateAsync({ pessoa_id: pessoaId, logradouro: eForm.logradouro || undefined, numero: eForm.numero || undefined, cep: eForm.cep || undefined, municipio_id: eForm.municipio_id || undefined, bairro_id: eForm.bairro_id || undefined, tipo: eForm.tipo });
-                    setEForm({ logradouro: "", numero: "", cep: "", municipio_id: "", bairro_id: "", tipo: "residencial" });
+                    await createEndereco.mutateAsync({ pessoa_id: pessoaId, logradouro: eForm.logradouro || undefined, numero: eForm.numero || undefined, complemento: eForm.complemento || undefined, cep: eForm.cep || undefined, municipio_id: eForm.municipio_id || undefined, bairro_id: eForm.bairro_id || undefined, tipo: eForm.tipo });
+                    setEForm({ logradouro: "", numero: "", complemento: "", cep: "", municipio_id: "", bairro_id: "", tipo: "residencial" });
                     toast({ title: "Endereço adicionado!" });
                   } catch (e: any) { toast({ variant: "destructive", description: e.message }); }
-                }}><Plus className="h-4 w-4" /></Button>
+                }}><Plus className="h-4 w-4 mr-1" />Adicionar</Button>
               </div>
               {enderecos.map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between p-2 rounded bg-accent/30">
