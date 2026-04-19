@@ -11,7 +11,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Brain, Plus, Pencil, Trash2, Zap, Check, X, AlertCircle, ExternalLink } from "lucide-react";
-import { useAIProvedores, useAIModelos, useUpsertProvedor, useDeleteProvedor, useTestProvedor, useUpsertModelo, useDeleteModelo, useAIUsoLog, type AIModelPayload, type AIProviderPayload } from "@/hooks/useAI";
+import { useAIProvedores, useAIModelos, useUpsertProvedor, useDeleteProvedor, useTestProvedor, useUpsertModelo, useDeleteModelo, useAIUsoLog } from "@/hooks/useAI";
+
+type ProviderType = "openai" | "anthropic" | "google" | "groq" | "mistral" | "openrouter" | "azure_openai" | "cohere" | "perplexity" | "xai" | "deepseek" | "custom";
+type ProviderStatus = "ativo" | "inativo" | "erro" | "testando";
+
+type ProviderDialogState = {
+  id?: string;
+  nome?: string;
+  tipo: ProviderType;
+  descricao?: string | null;
+  base_url: string;
+  secret_name: string;
+  prioridade: number;
+  status: ProviderStatus;
+  headers_extra?: Record<string, string>;
+};
+
+type ModelDialogState = {
+  id?: string;
+  provedor_id?: string | null;
+  nome?: string;
+  modelo_id?: string;
+  contexto_tokens: number;
+  max_output_tokens: number;
+  custo_input_por_1m: number;
+  custo_output_por_1m: number;
+  suporta_vision?: boolean;
+  suporta_tools?: boolean;
+  suporta_reasoning?: boolean;
+  ativo: boolean;
+};
 
 const TIPOS = [
   { v: "openai", label: "OpenAI" },
@@ -32,8 +62,8 @@ export function CentralIATab() {
   const { data: provedores } = useAIProvedores();
   const { data: modelos } = useAIModelos();
   const [tab, setTab] = useState("provedores");
-  const [provDialog, setProvDialog] = useState<AIProviderPayload | null>(null);
-  const [modeloDialog, setModeloDialog] = useState<AIModelPayload | null>(null);
+  const [provDialog, setProvDialog] = useState<ProviderDialogState | null>(null);
+  const [modeloDialog, setModeloDialog] = useState<ModelDialogState | null>(null);
   const upsertProv = useUpsertProvedor();
   const deleteProv = useDeleteProvedor();
   const testProv = useTestProvedor();
@@ -172,7 +202,7 @@ export function CentralIATab() {
                       <TableCell className="text-xs">{u.tokens_input}↓ {u.tokens_output}↑</TableCell>
                       <TableCell className="text-xs">${Number(u.custo_estimado).toFixed(4)}</TableCell>
                       <TableCell className="text-xs">{u.latencia_ms}ms</TableCell>
-                      <TableCell>{u.sucesso ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-destructive" />}</TableCell>
+                       <TableCell>{u.sucesso ? <Check className="h-4 w-4 text-primary" /> : <X className="h-4 w-4 text-destructive" />}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
