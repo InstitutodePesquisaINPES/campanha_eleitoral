@@ -28,7 +28,10 @@ export function CandidatosTab({ uf, ano, cargo, codMunicipio }: { uf: string; an
         {isLoading ? (
           <div className="space-y-2">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : candidatos.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-12">Nenhum candidato encontrado para os filtros selecionados.</p>
+          <div className="text-center py-12 space-y-2">
+            <p className="text-sm text-muted-foreground">Nenhum candidato encontrado para os filtros selecionados.</p>
+            <p className="text-xs text-muted-foreground">Se a base de candidatos ainda não foi importada, vá em <strong>Admin → Importar TSE</strong> e rode a importação para <strong>{uf}/{ano}</strong>.</p>
+          </div>
         ) : (
           <>
             <div className="overflow-x-auto">

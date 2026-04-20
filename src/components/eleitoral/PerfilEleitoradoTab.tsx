@@ -5,26 +5,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--info))", "hsl(var(--success))", "hsl(var(--warning))", "hsl(var(--destructive))", "hsl(var(--muted-foreground))"];
 
-function aggregate(rows: any[], key: string) {
-  const map = new Map<string, number>();
-  rows.forEach(r => {
-    const k = r[key] ?? "Não informado";
-    map.set(k, (map.get(k) ?? 0) + (r.quantidade_eleitores ?? 0));
-  });
-  return Array.from(map.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-}
-
 export function PerfilEleitoradoTab({ uf, ano, municipio }: { uf: string; ano: number; municipio?: string }) {
-  const { data: rows = [], isLoading } = useEleitoradoPerfil(uf, ano, municipio);
+  const { data, isLoading } = useEleitoradoPerfil(uf, ano, municipio);
 
   if (isLoading) return <div className="grid grid-cols-2 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-72" />)}</div>;
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground text-center py-12">Sem dados de eleitorado para os filtros.</p>;
+  if (!data || data.total === 0) return <p className="text-sm text-muted-foreground text-center py-12">Sem dados de eleitorado para os filtros.</p>;
 
-  const total = rows.reduce((s, r) => s + (r.quantidade_eleitores ?? 0), 0);
-  const genero = aggregate(rows, "genero");
-  const faixa = aggregate(rows, "faixa_etaria");
-  const escol = aggregate(rows, "grau_instrucao");
-  const cor = aggregate(rows, "cor_raca");
+  const { total, genero, faixa_etaria: faixa, grau_instrucao: escol, cor_raca: cor } = data;
 
   return (
     <div className="space-y-4">
