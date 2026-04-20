@@ -5898,6 +5898,16 @@ export type Database = {
         Args: { _ano?: number; _uf?: string; _votos_min?: number }
         Returns: number
       }
+      tse_comparativo_eleicoes: {
+        Args: { _cargo?: string; _municipio?: string; _uf?: string }
+        Returns: {
+          ano: number
+          total_candidatos: number
+          total_eleitores: number
+          total_eleitos: number
+          total_votos_nominais: number
+        }[]
+      }
       tse_dashboard_kpis: {
         Args: { _ano?: number; _uf?: string }
         Returns: Json
@@ -5905,6 +5915,26 @@ export type Database = {
       tse_eleitorado_agregado: {
         Args: { _ano?: number; _municipio?: string; _uf?: string }
         Returns: Json
+      }
+      tse_origem_votos_local: {
+        Args: {
+          _ano: number
+          _cargo?: string
+          _cod_municipio_tse: string
+          _numero_votavel?: string
+          _uf: string
+        }
+        Returns: {
+          bairro: string
+          codigo_local: string
+          endereco: string
+          latitude: number
+          longitude: number
+          nome_local: string
+          total_secoes: number
+          total_votos: number
+          zona: number
+        }[]
       }
       tse_resumo_municipios: {
         Args: { _ano: number; _uf: string }
