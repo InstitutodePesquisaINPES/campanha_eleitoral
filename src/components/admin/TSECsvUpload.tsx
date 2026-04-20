@@ -279,13 +279,13 @@ export function TSECsvUpload() {
             try {
               for (const row of results.data as any[]) {
                 totalRead++;
-                const mapped = mapRow(tipo, ano, uf, row);
+                const mapped = mapRow(tipoEfetivo, ano, uf, row);
                 if (!mapped) continue;
                 buffer.push(mapped);
                 if (buffer.length >= CHUNK) {
                   const slice = buffer;
                   buffer = [];
-                  const ins = await sendChunk(slice, firstChunk);
+                  const ins = await sendChunk(slice);
                   firstChunk = false;
                   totalEnv += ins;
                   setEnviados(totalEnv);
