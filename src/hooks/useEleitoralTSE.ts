@@ -183,6 +183,36 @@ export function useAnosDisponiveis(uf: string) {
   });
 }
 
+export function useTSEComparativo(uf: string, municipio?: string, cargo?: string) {
+  return useQuery({
+    queryKey: ["tse-comparativo", uf, municipio ?? null, cargo ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("tse_comparativo_eleicoes" as any, {
+        _uf: uf, _municipio: municipio ?? null, _cargo: cargo ?? null,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        ano: number; total_eleitores: number; total_candidatos: number; total_eleitos: number; total_votos_nominais: number;
+      }>;
+    },
+  });
+}
+
+export function useTSEOrigemVotosLocal(filters: { ano: number; uf: string; cod_municipio_tse: string; cargo?: string; numero_votavel?: string } | null) {
+  return useQuery({
+    queryKey: ["tse-origem-local", filters],
+    enabled: !!filters?.cod_municipio_tse,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("tse_origem_votos_local" as any, {
+        _ano: filters!.ano, _uf: filters!.uf, _cod_municipio_tse: filters!.cod_municipio_tse,
+        _cargo: filters!.cargo ?? null, _numero_votavel: filters!.numero_votavel ?? null,
+      });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+}
+
 export const CARGOS_TSE = [
   "Vereador", "Prefeito", "Vice-Prefeito",
   "Deputado Estadual", "Deputado Federal", "Senador",
