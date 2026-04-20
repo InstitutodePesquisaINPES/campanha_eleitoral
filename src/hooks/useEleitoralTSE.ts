@@ -104,7 +104,7 @@ export function useCandidatoMatchPessoa(nomeCompleto: string | null, cpf: string
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? [])[0] as { pessoa_id: string; pessoa_nome: string } | undefined;
+      return ((data ?? [])[0] as unknown) as { pessoa_id: string; pessoa_nome: string } | undefined;
     },
   });
 }
