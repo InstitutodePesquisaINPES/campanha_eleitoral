@@ -82,8 +82,8 @@ Deno.serve(async (req) => {
       tse_resultados_secao: "ano,turno,uf,cod_municipio_tse,zona,secao,cargo,numero_votavel",
       tse_candidatos: undefined,
       tse_prestacao_contas: undefined,
-      tse_eleitorado_perfil: undefined,
-      tse_votacao_candidato_perfil: undefined,
+      tse_eleitorado_perfil: "tse_eleit_perfil_uniq",
+      tse_votacao_candidato_perfil: "tse_votcand_perfil_uniq",
     };
 
     const SUBLOTE = 250;
