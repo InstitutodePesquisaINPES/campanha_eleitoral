@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { useVotosPorSecao } from "@/hooks/useEleitoralTSE";
+import { useTSEOrigemVotosLocal, useVotosPorSecao } from "@/hooks/useEleitoralTSE";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin } from "lucide-react";
 
 export function OrigemVotosTab({ uf, ano, cargo, codMunicipio }: { uf: string; ano: number; cargo?: string; codMunicipio?: string }) {
   const [numero, setNumero] = useState("");
-  const { data: rows = [], isLoading } = useVotosPorSecao(
-    codMunicipio ? { ano, uf, cod_municipio_tse: codMunicipio, cargo, numero_votavel: numero || undefined } : null
-  );
+  const filters = codMunicipio ? { ano, uf, cod_municipio_tse: codMunicipio, cargo, numero_votavel: numero || undefined } : null;
+  const { data: rows = [], isLoading } = useVotosPorSecao(filters);
+  const { data: locais = [], isLoading: loadingLocais } = useTSEOrigemVotosLocal(filters);
 
   if (!codMunicipio) {
     return <p className="text-sm text-muted-foreground text-center py-12">Selecione um município na aba <strong>Visão Geral</strong> para drill em zona/seção.</p>;
