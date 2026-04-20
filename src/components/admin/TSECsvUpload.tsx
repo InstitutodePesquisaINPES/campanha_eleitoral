@@ -22,6 +22,22 @@ type TipoDado =
   | "eleitorado_perfil"
   | "votacao_candidato_perfil";
 
+// Detecção automática do tipo de dado pelo cabeçalho do CSV
+function detectTipo(headers: string[]): TipoDado | null {
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  const H = new Set(headers.map(norm));
+  const has = (...ks: string[]) => ks.every((k) => H.has(norm(k)));
+  const hasAny = (...ks: string[]) => ks.some((k) => H.has(norm(k)));
+
+  if (has("Nome candidato", "Votos nominais") && hasAny("Cor/raça", "Faixa etária", "Gênero", "Grau de instrução")) return "votacao_candidato_perfil";
+  if (has("Quantidade de eleitores") && hasAny("Cor / Raça", "Faixa etária", "Gênero", "Grau de instrução")) return "eleitorado_perfil";
+  if (hasAny("NM_LOCAL_VOTACAO", "DS_LOCAL_VOTACAO")) return "locais";
+  if (hasAny("NM_URNA_CANDIDATO", "NM_CANDIDATO") && hasAny("DS_CARGO", "CD_CARGO")) return "candidatos";
+  if (hasAny("QT_VOTOS") && hasAny("NR_VOTAVEL")) return "resultados";
+  if (hasAny("QT_ELEITORES_PERFIL", "QT_ELEITORES")) return "eleitorado";
+  return null;
+}
+
 const TIPOS: { value: TipoDado; label: string; tabela: string; hint: string }[] = [
   { value: "eleitorado_perfil", label: "Eleitorado consolidado (perfil completo)", tabela: "tse_eleitorado_perfil", hint: "eleitorado_eleicao.csv (cor/raça, faixa etária, gênero, escolaridade, etc.)" },
   { value: "votacao_candidato_perfil", label: "Votação por candidato × perfil eleitor", tabela: "tse_votacao_candidato_perfil", hint: "votacao_candidato.csv (votos por candidato cruzados com perfil)" },
