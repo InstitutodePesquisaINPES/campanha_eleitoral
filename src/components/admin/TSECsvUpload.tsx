@@ -389,7 +389,7 @@ export function TSECsvUpload() {
             type="file"
             accept=".csv,text/csv"
             disabled={running}
-            onChange={(e) => { setFile(e.target.files?.[0] ?? null); reset(); }}
+            onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
           />
           {file && (
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
