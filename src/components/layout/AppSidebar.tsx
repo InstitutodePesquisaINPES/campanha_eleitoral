@@ -22,6 +22,7 @@ import {
   Brain,
   Sparkles,
   TrendingUp,
+  BarChartBig,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -64,6 +65,7 @@ const modulesItems = [
 
 const analyticsItems = [
   { title: "Inteligência Política", url: "/inteligencia-politica", icon: Brain },
+  { title: "Dashboard Eleitoral TSE", url: "/eleitoral", icon: BarChartBig },
   { title: "Mapa Estratégico", url: "/mapa-estrategico", icon: Target },
   { title: "Inteligência Territorial", url: "/inteligencia", icon: Brain },
   { title: "Copilots IA", url: "/copilot", icon: Sparkles },
