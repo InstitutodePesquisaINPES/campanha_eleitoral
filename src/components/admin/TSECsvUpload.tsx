@@ -473,6 +473,97 @@ export function TSECsvUpload() {
           )}
         </div>
 
+        {file && podeFiltrarMunicipio && (
+          <div className="space-y-2 rounded-lg border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <Label className="text-sm">Filtrar por município (opcional)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Útil para planilhas estaduais imensas. Sem seleção = importa tudo.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={escanearMunicipios}
+                disabled={running || scanningMun}
+              >
+                {scanningMun ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                {municipiosDisponiveis.length > 0 ? "Reescanear" : "Listar municípios"}
+              </Button>
+            </div>
+
+            {municipiosDisponiveis.length > 0 && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Buscar município..."
+                    value={filtroBuscaMun}
+                    onChange={(e) => setFiltroBuscaMun(e.target.value)}
+                    className="h-8"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setMunicipiosSelecionados(new Set())}
+                    disabled={municipiosSelecionados.size === 0}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+                {municipiosSelecionados.size > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {Array.from(municipiosSelecionados).slice(0, 20).map((k) => (
+                      <Badge key={k} variant="secondary" className="text-[10px]">
+                        {municipiosDisponiveis.find((m) => m.codigo === k || m.nome === k)?.nome ?? k}
+                      </Badge>
+                    ))}
+                    {municipiosSelecionados.size > 20 && (
+                      <Badge variant="outline" className="text-[10px]">
+                        +{municipiosSelecionados.size - 20}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                <ScrollArea className="h-48 rounded border">
+                  <div className="p-2 space-y-1">
+                    {municipiosDisponiveis
+                      .filter((m) =>
+                        !filtroBuscaMun ||
+                        m.nome.toLowerCase().includes(filtroBuscaMun.toLowerCase()) ||
+                        m.codigo.includes(filtroBuscaMun)
+                      )
+                      .slice(0, 500)
+                      .map((m) => {
+                        const key = m.codigo || m.nome;
+                        const checked = municipiosSelecionados.has(key);
+                        return (
+                          <label
+                            key={key}
+                            className="flex items-center gap-2 px-2 py-1 text-xs rounded hover:bg-muted cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                const next = new Set(municipiosSelecionados);
+                                if (v) next.add(key); else next.delete(key);
+                                setMunicipiosSelecionados(next);
+                              }}
+                            />
+                            <span className="flex-1">{m.nome || "—"}</span>
+                            <span className="text-muted-foreground">{m.codigo}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
+          </div>
+        )}
+
         {(running || done || erro) && (
           <div className="space-y-2">
             <Progress value={progress} />
