@@ -42,8 +42,6 @@ export function CandidatoDrawer360({ candidato, onClose }: { candidato: any | nu
   const [editandoCampanha, setEditandoCampanha] = useState(false);
   const [form, setForm] = useState<any | null>(null);
 
-  if (!candidato) return null;
-
   useEffect(() => {
     if (campanhaRelacionada) {
       setForm({
@@ -80,6 +78,8 @@ export function CandidatoDrawer360({ candidato, onClose }: { candidato: any | nu
     if (!campanhaRelacionada) return null;
     return campanhaRelacionada.municipios?.nome ?? campanhaRelacionada.estados?.nome ?? "Escopo não definido";
   }, [campanhaRelacionada]);
+
+  if (!candidato) return null;
 
   return (
     <Sheet open={!!candidato} onOpenChange={(o) => !o && onClose()}>
