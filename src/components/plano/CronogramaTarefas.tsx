@@ -97,12 +97,6 @@ const RESPONSAVEIS_SUGERIDOS = [
   "Assessoria de Imprensa", "Coordenador de Mobilização", "Coordenador Digital", "Equipe de Dados",
 ];
 
-function NovaTarefaDialog({ campanhaId, canManage }: { campanhaId: string; canManage: boolean }) {
-  const [open, setOpen] = useState(false);
-  const create = useCreateTarefa();
-  const { data: campanha } = useCampanha(campanhaId);
-  const dataInicio = campanha?.data_inicio_plano ? new Date(campanha.data_inicio_plano) : new Date();
-
 // Tipo do formulário interno
 type FormState = {
   titulo: string;
