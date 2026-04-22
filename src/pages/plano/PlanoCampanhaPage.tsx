@@ -5,17 +5,26 @@ import { CronogramaTarefas } from "@/components/plano/CronogramaTarefas";
 import { MetasFases, PlanejamentoSemanal } from "@/components/plano/MetasESemanas";
 import { ParametrosGerador } from "@/components/plano/ParametrosGerador";
 import { MarcosTimeline } from "@/components/plano/MarcosTimeline";
-import { useCampanha, useCampanhaAtiva } from "@/hooks/useCampanhas";
+import { useCampanha, useCampanhaAtiva, useUpdateCampanha } from "@/hooks/useCampanhas";
+import { useCanManage } from "@/hooks/useUserRoles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Vote, Calendar, Target, Trophy, Flame, Settings2, Flag } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Vote, Calendar, Target, Trophy, Flame, Settings2, Flag, Pencil, Save } from "lucide-react";
 
 export default function PlanoCampanhaPage() {
   const { data: ativa } = useCampanhaAtiva();
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const currentId = selectedId ?? ativa?.id;
   const { data: campanha } = useCampanha(currentId);
+  const canManage = useCanManage();
+  const updateCampanha = useUpdateCampanha();
+  const [metaOpen, setMetaOpen] = useState(false);
+  const [metaInput, setMetaInput] = useState<string>("");
 
   const duracaoTotal = campanha
     ? Math.max(1, Math.ceil((new Date(campanha.data_eleicao).getTime() - new Date(campanha.data_inicio_plano).getTime()) / 86400000))
@@ -70,13 +79,57 @@ export default function PlanoCampanhaPage() {
                   <p className="text-xs text-muted-foreground">{campanha.numero_urna ? `Nº ${campanha.numero_urna}` : "Sem nº urna"}{campanha.partido_sigla ? ` · ${campanha.partido_sigla}` : ""}</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <Target className="h-4 w-4 text-success mb-1" />
-                  <div className="text-2xl font-bold">{campanha.meta_votos?.toLocaleString("pt-BR") ?? "—"}</div>
-                  <p className="text-xs text-muted-foreground">Meta de votos</p>
-                </CardContent>
-              </Card>
+              <Popover open={metaOpen} onOpenChange={(o) => { setMetaOpen(o); if (o) setMetaInput(String(campanha.meta_votos ?? "")); }}>
+                <PopoverTrigger asChild>
+                  <Card className={`group ${canManage ? "cursor-pointer hover:border-primary/60 hover:shadow-md transition" : ""}`}>
+                    <CardContent className="p-4 relative">
+                      <Target className="h-4 w-4 text-success mb-1" />
+                      <div className="text-2xl font-bold">{campanha.meta_votos?.toLocaleString("pt-BR") ?? "—"}</div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        Meta de votos
+                        {canManage && <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-70 transition" />}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </PopoverTrigger>
+                {canManage && (
+                  <PopoverContent className="w-72" align="start">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs">Meta de votos</Label>
+                        <Input
+                          autoFocus
+                          type="number"
+                          min={0}
+                          value={metaInput}
+                          onChange={(e) => setMetaInput(e.target.value)}
+                          placeholder="Ex: 5000"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Usada nos KPIs do Comando, geração do plano e cálculo de cadastros/visitas.
+                        </p>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setMetaOpen(false)}>Cancelar</Button>
+                        <Button
+                          size="sm"
+                          className="gap-1"
+                          disabled={updateCampanha.isPending || !metaInput || Number(metaInput) < 0}
+                          onClick={() =>
+                            updateCampanha.mutate(
+                              { id: campanha.id, meta_votos: Number(metaInput) },
+                              { onSuccess: () => setMetaOpen(false) },
+                            )
+                          }
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          {updateCampanha.isPending ? "Salvando..." : "Salvar"}
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                )}
+              </Popover>
               <Card>
                 <CardContent className="p-4">
                   <Calendar className="h-4 w-4 text-info mb-1" />
