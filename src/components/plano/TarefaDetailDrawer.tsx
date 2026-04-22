@@ -34,7 +34,6 @@ import { Switch } from "@/components/ui/switch";
 import { RespaldoLegalPicker } from "./RespaldoLegalPicker";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
 
 const FASE_LEGAL_OPTS = [
   { value: "pre_campanha_legal", label: "Pré-campanha (até registro TSE)" },
