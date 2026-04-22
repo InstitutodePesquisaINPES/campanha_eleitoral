@@ -368,12 +368,32 @@ export function TarefaDetailDrawer({
                 </p>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Respaldo legal</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Respaldo legal</Label>
+                  {canManage && (
+                    <RespaldoLegalPicker
+                      onPick={(ref) => {
+                        const atual = tx.respaldo_legal ?? "";
+                        const novo = atual
+                          ? `${atual}\n\n${ref.norma} — ${ref.ementa}`
+                          : `${ref.norma} — ${ref.ementa}`;
+                        update.mutate({ id: tarefa.id, respaldo_legal: novo } as never);
+                      }}
+                      triggerLabel="Buscar referência"
+                    />
+                  )}
+                </div>
                 {canManage ? (
-                  <RespaldoLegalPicker
-                    value={tx.respaldo_legal ?? ""}
-                    onChange={(v) => update.mutate({ id: tarefa.id, respaldo_legal: v || null } as never)}
-                    permitidoAntesRegistro={tx.permitido_antes_registro !== false}
+                  <Textarea
+                    defaultValue={tx.respaldo_legal ?? ""}
+                    key={tx.respaldo_legal ?? "empty"}
+                    placeholder="Cite a base legal (Lei 9.504/97, Resoluções TSE...) ou use o botão acima."
+                    rows={5}
+                    className="text-sm leading-relaxed"
+                    onBlur={(e) => {
+                      const v = e.target.value;
+                      if (v !== (tx.respaldo_legal ?? "")) update.mutate({ id: tarefa.id, respaldo_legal: v || null } as never);
+                    }}
                   />
                 ) : (
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{tx.respaldo_legal || "—"}</p>
