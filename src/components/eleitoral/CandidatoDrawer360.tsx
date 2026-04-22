@@ -65,6 +65,13 @@ export function CandidatoDrawer360({ candidato, onClose }: { candidato: any | nu
     setEditandoCampanha(false);
   }, [campanhaRelacionada?.id]);
 
+  const resumoEscopo = useMemo(() => {
+    if (!campanhaRelacionada) return null;
+    return campanhaRelacionada.municipios?.nome ?? campanhaRelacionada.estados?.nome ?? "Escopo não definido";
+  }, [campanhaRelacionada]);
+
+  if (!candidato) return null;
+
   const historicoExibicao = historico.length > 0 ? historico : [{
     ...candidato,
     municipio_nome: candidato.municipio_nome ?? candidato.cod_municipio_tse,
@@ -74,12 +81,6 @@ export function CandidatoDrawer360({ candidato, onClose }: { candidato: any | nu
   const totalVotos = historicoExibicao.reduce((s: number, h: any) => s + (h.votos_recebidos ?? 0), 0);
   const eleicoes = historicoExibicao.length;
   const vitorias = historicoExibicao.filter((h: any) => h.eleito).length;
-  const resumoEscopo = useMemo(() => {
-    if (!campanhaRelacionada) return null;
-    return campanhaRelacionada.municipios?.nome ?? campanhaRelacionada.estados?.nome ?? "Escopo não definido";
-  }, [campanhaRelacionada]);
-
-  if (!candidato) return null;
 
   return (
     <Sheet open={!!candidato} onOpenChange={(o) => !o && onClose()}>
