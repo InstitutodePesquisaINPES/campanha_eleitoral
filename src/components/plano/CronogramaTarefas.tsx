@@ -1044,4 +1044,3 @@ export function CronogramaTarefas({ campanhaId }: { campanhaId: string }) {
     </div>
   );
 }
-}
