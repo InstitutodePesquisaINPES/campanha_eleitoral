@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useIsAdmin } from "@/hooks/useUserRoles";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Settings } from "lucide-react";
 
 export default function SettingsPage() {
-  const isAdmin = useIsAdmin();
+  const { data: roles = [], isLoading: rolesLoading } = useUserRoles();
+  const isAdmin = roles.includes("admin");
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -73,6 +74,8 @@ export default function SettingsPage() {
       toast({ variant: "destructive", title: "Erro ao salvar" });
     }
   };
+
+  if (rolesLoading) return null;
 
   if (!isAdmin) return <Navigate to="/" replace />;
 

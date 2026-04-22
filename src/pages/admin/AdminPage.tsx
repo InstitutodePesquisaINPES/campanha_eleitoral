@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useIsAdmin } from "@/hooks/useUserRoles";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield } from "lucide-react";
@@ -16,7 +16,12 @@ import { TSEImportTab } from "@/components/admin/TSEImportTab";
 import { CentralIATab } from "@/components/admin/CentralIATab";
 
 export default function AdminPage() {
-  const isAdmin = useIsAdmin();
+  const { data: roles = [], isLoading } = useUserRoles();
+  const isAdmin = roles.includes("admin");
+
+  if (isLoading) {
+    return null;
+  }
 
   if (!isAdmin) {
     return <Navigate to="/" replace />;
