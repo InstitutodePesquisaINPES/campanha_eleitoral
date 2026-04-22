@@ -29,6 +29,14 @@ import {
   ScrollText, ListChecks, Info, ShieldCheck, ShieldAlert, User, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { RespaldoLegalPicker } from "./RespaldoLegalPicker";
+
+const FASE_LEGAL_OPTS = [
+  { value: "pre_campanha_legal", label: "Pré-campanha (até registro TSE)" },
+  { value: "campanha_oficial", label: "Campanha oficial (pós-registro)" },
+  { value: "pos_eleicao", label: "Pós-eleição" },
+];
 
 const STATUS_OPTS = [
   { value: "pendente", label: "A fazer" },
@@ -146,12 +154,47 @@ export function TarefaDetailDrawer({
                 </SelectContent>
               </Select>
             </div>
-            {tx.responsavel_papel && (
-              <div className="space-y-1.5">
-                <Label className="text-xs flex items-center gap-1"><User className="h-3 w-3" />Responsável</Label>
-                <div className="text-sm border rounded-md px-3 h-10 flex items-center bg-muted/30">{tx.responsavel_papel}</div>
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <Label className="text-xs flex items-center gap-1"><User className="h-3 w-3" />Responsável</Label>
+              <Input
+                defaultValue={tx.responsavel_papel ?? ""}
+                placeholder="Ex: Coordenador de campo"
+                disabled={!canManage}
+                className="h-10"
+                onBlur={(e) => {
+                  const val = e.target.value.trim();
+                  if (val !== (tx.responsavel_papel ?? "")) {
+                    update.mutate({ id: tarefa.id, responsavel_papel: val || null } as never);
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Linha 2: fase legal + marco */}
+          <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Fase legal</Label>
+              <Select
+                value={tx.fase_legal ?? "pre_campanha_legal"}
+                disabled={!canManage}
+                onValueChange={(v) => update.mutate({ id: tarefa.id, fase_legal: v } as never)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {FASE_LEGAL_OPTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 border rounded-md px-3 h-10 bg-muted/20">
+              <Flag className={`h-4 w-4 ${tx.is_marco ? "text-warning" : "text-muted-foreground"}`} />
+              <Label className="text-xs cursor-pointer">Marco</Label>
+              <Switch
+                checked={!!tx.is_marco}
+                disabled={!canManage}
+                onCheckedChange={(c) => update.mutate({ id: tarefa.id, is_marco: c } as never)}
+              />
+            </div>
           </div>
 
           <Tabs defaultValue="visao">
@@ -164,27 +207,49 @@ export function TarefaDetailDrawer({
 
             {/* VISÃO GERAL */}
             <TabsContent value="visao" className="space-y-4 mt-4">
-              {tx.o_que_e && (
-                <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que é</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap">{tx.o_que_e}</p>
-                </div>
-              )}
-              {tx.o_que_faz && (
-                <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que faz / como executar</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap">{tx.o_que_faz}</p>
-                </div>
-              )}
-              {tx.entregaveis && (
-                <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entregáveis</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap font-mono text-xs bg-muted/40 p-3 rounded-md">{tx.entregaveis}</p>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que é</Label>
+                <Textarea
+                  defaultValue={tx.o_que_e ?? ""}
+                  placeholder="Descreva o que é esta tarefa..."
+                  disabled={!canManage}
+                  rows={2}
+                  onBlur={(e) => {
+                    const v = e.target.value;
+                    if (v !== (tx.o_que_e ?? "")) update.mutate({ id: tarefa.id, o_que_e: v || null } as never);
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que faz / como executar</Label>
+                <Textarea
+                  defaultValue={tx.o_que_faz ?? ""}
+                  placeholder="Passo a passo de execução..."
+                  disabled={!canManage}
+                  rows={3}
+                  onBlur={(e) => {
+                    const v = e.target.value;
+                    if (v !== (tx.o_que_faz ?? "")) update.mutate({ id: tarefa.id, o_que_faz: v || null } as never);
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entregáveis</Label>
+                <Textarea
+                  defaultValue={tx.entregaveis ?? ""}
+                  placeholder="Um por linha. Ex: Ata assinada · Lista de presença"
+                  disabled={!canManage}
+                  rows={3}
+                  className="font-mono text-xs"
+                  onBlur={(e) => {
+                    const v = e.target.value;
+                    if (v !== (tx.entregaveis ?? "")) update.mutate({ id: tarefa.id, entregaveis: v || null } as never);
+                  }}
+                />
+              </div>
               {tarefa.descricao && !tx.o_que_e && (
                 <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrição</Label>
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrição original</Label>
                   <p className="text-sm mt-1 whitespace-pre-wrap text-muted-foreground">{tarefa.descricao}</p>
                 </div>
               )}
@@ -279,12 +344,22 @@ export function TarefaDetailDrawer({
             {/* RESPALDO LEGAL */}
             <TabsContent value="legal" className="space-y-3 mt-4">
               <div className={`rounded-md border p-3 ${tx.permitido_antes_registro === false ? "bg-destructive/5 border-destructive/30" : "bg-success/5 border-success/30"}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  {tx.permitido_antes_registro === false ? (
-                    <><ShieldAlert className="h-4 w-4 text-destructive" /><span className="text-xs font-semibold text-destructive">Apenas após registro de candidatura no TSE</span></>
-                  ) : (
-                    <><ShieldCheck className="h-4 w-4 text-success" /><span className="text-xs font-semibold text-success">Permitido na pré-campanha</span></>
-                  )}
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {tx.permitido_antes_registro === false ? (
+                      <><ShieldAlert className="h-4 w-4 text-destructive" /><span className="text-xs font-semibold text-destructive">Apenas após registro TSE</span></>
+                    ) : (
+                      <><ShieldCheck className="h-4 w-4 text-success" /><span className="text-xs font-semibold text-success">Permitido na pré-campanha</span></>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[11px] cursor-pointer">Permitido antes do registro</Label>
+                    <Switch
+                      checked={tx.permitido_antes_registro !== false}
+                      disabled={!canManage}
+                      onCheckedChange={(c) => update.mutate({ id: tarefa.id, permitido_antes_registro: c } as never)}
+                    />
+                  </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                   {tx.permitido_antes_registro === false
@@ -292,14 +367,38 @@ export function TarefaDetailDrawer({
                     : "Ação enquadrada como ato preparatório legítimo. Não envolve pedido explícito de voto nem captação de recursos."}
                 </p>
               </div>
-              {tx.respaldo_legal ? (
-                <div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
                   <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Respaldo legal</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap leading-relaxed">{tx.respaldo_legal}</p>
+                  {canManage && (
+                    <RespaldoLegalPicker
+                      onPick={(ref) => {
+                        const atual = tx.respaldo_legal ?? "";
+                        const novo = atual
+                          ? `${atual}\n\n${ref.norma} — ${ref.ementa}`
+                          : `${ref.norma} — ${ref.ementa}`;
+                        update.mutate({ id: tarefa.id, respaldo_legal: novo } as never);
+                      }}
+                      triggerLabel="Buscar referência"
+                    />
+                  )}
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground text-center py-6">Sem respaldo legal cadastrado para esta tarefa.</p>
-              )}
+                {canManage ? (
+                  <Textarea
+                    defaultValue={tx.respaldo_legal ?? ""}
+                    key={tx.respaldo_legal ?? "empty"}
+                    placeholder="Cite a base legal (Lei 9.504/97, Resoluções TSE...) ou use o botão acima."
+                    rows={5}
+                    className="text-sm leading-relaxed"
+                    onBlur={(e) => {
+                      const v = e.target.value;
+                      if (v !== (tx.respaldo_legal ?? "")) update.mutate({ id: tarefa.id, respaldo_legal: v || null } as never);
+                    }}
+                  />
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{tx.respaldo_legal || "—"}</p>
+                )}
+              </div>
               <p className="text-[10px] text-muted-foreground border-t pt-2">
                 Referências: Lei 9.504/97 · Resoluções TSE 23.607/2019, 23.609/2019, 23.610/2019.
               </p>
