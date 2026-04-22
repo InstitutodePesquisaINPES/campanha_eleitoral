@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,10 +27,14 @@ import {
 import {
   FileText, Upload, Download, Trash2, CalendarDays, Clock, Flag,
   ScrollText, ListChecks, Info, ShieldCheck, ShieldAlert, User, Plus,
+  Loader2, Check, History, Undo2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { RespaldoLegalPicker } from "./RespaldoLegalPicker";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 const FASE_LEGAL_OPTS = [
   { value: "pre_campanha_legal", label: "Pré-campanha (até registro TSE)" },
@@ -47,6 +51,18 @@ const STATUS_OPTS = [
 
 const TIPOS_DOC = ["contrato", "ata", "comprovante", "proposta", "oficio", "midia", "outros"];
 
+// Campos rastreados pelo histórico inline
+const TRACKED_FIELDS: Record<string, string> = {
+  fase_legal: "Fase legal",
+  is_marco: "Marco",
+  o_que_e: "O que é",
+  o_que_faz: "O que faz",
+  entregaveis: "Entregáveis",
+  respaldo_legal: "Respaldo legal",
+  responsavel_papel: "Responsável",
+  permitido_antes_registro: "Permitido antes do registro",
+};
+
 type TarefaExt = Tarefa & {
   observacoes?: string | null;
   fase_legal?: "pre_campanha_legal" | "campanha_oficial" | "pos_eleicao" | null;
@@ -58,6 +74,8 @@ type TarefaExt = Tarefa & {
   responsavel_papel?: string | null;
   permitido_antes_registro?: boolean | null;
 };
+
+type FieldStatus = "idle" | "saving" | "saved" | "error";
 
 function FaseLegalBadge({ fase, permitido }: { fase?: string | null; permitido?: boolean | null }) {
   if (fase === "campanha_oficial") {
@@ -71,6 +89,23 @@ function FaseLegalBadge({ fase, permitido }: { fase?: string | null; permitido?:
       Pré-campanha (até registro 15/08)
     </Badge>
   );
+}
+
+function SaveIndicator({ status }: { status: FieldStatus }) {
+  if (status === "saving") return <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Salvando" />;
+  if (status === "saved") return <Check className="h-3 w-3 text-success" aria-label="Salvo" />;
+  if (status === "error") return <ShieldAlert className="h-3 w-3 text-destructive" aria-label="Erro" />;
+  return null;
+}
+
+// Normaliza texto de entregáveis: remove linhas vazias do meio, trim por linha
+function normalizeEntregaveis(raw: string): string {
+  return raw
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l, i, arr) => l !== "" || i === arr.length - 1)
+    .join("\n")
+    .trim();
 }
 
 export function TarefaDetailDrawer({
@@ -100,8 +135,69 @@ export function TarefaDetailDrawer({
   const [obs, setObs] = useState("");
   const [novaSub, setNovaSub] = useState("");
 
+  // Estado de salvamento por campo
+  const [fieldStatus, setFieldStatus] = useState<Record<string, FieldStatus>>({});
+  const setStatus = useCallback((field: string, s: FieldStatus) => {
+    setFieldStatus((prev) => ({ ...prev, [field]: s }));
+    if (s === "saved") {
+      setTimeout(() => setFieldStatus((p) => (p[field] === "saved" ? { ...p, [field]: "idle" } : p)), 1800);
+    }
+  }, []);
+
+  // Snapshot dos valores originais para "Desfazer alterações"
+  const originalRef = useRef<TarefaExt | null>(null);
+  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (tarefa && (!originalRef.current || originalRef.current.id !== tarefa.id)) {
+      originalRef.current = { ...(tarefa as TarefaExt) };
+      setDirtyFields(new Set());
+      setFieldStatus({});
+    }
+  }, [tarefa]);
+
+  // Histórico de auditoria
+  const { data: historico = [], refetch: refetchHistorico } = useQuery({
+    queryKey: ["tarefa-historico", tarefa?.id],
+    enabled: !!tarefa?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("id, action, user_id, new_data, old_data, created_at")
+        .eq("table_name", "campanha_tarefas")
+        .eq("record_id", tarefa!.id)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   if (!tarefa) return null;
   const tx = tarefa as TarefaExt;
+
+  // Salva campo com indicador + validação + tracking
+  const saveField = useCallback(
+    async (field: keyof TarefaExt, value: unknown, opts?: { validate?: () => string | null }) => {
+      const err = opts?.validate?.();
+      if (err) {
+        setStatus(field as string, "error");
+        toast.error(err);
+        return;
+      }
+      setStatus(field as string, "saving");
+      setDirtyFields((prev) => new Set(prev).add(field as string));
+      try {
+        await update.mutateAsync({ id: tarefa.id, [field]: value } as never);
+        setStatus(field as string, "saved");
+        if (TRACKED_FIELDS[field as string]) refetchHistorico();
+      } catch (e) {
+        setStatus(field as string, "error");
+        toast.error(`Falha ao salvar ${TRACKED_FIELDS[field as string] ?? field as string}: ${(e as Error).message}`);
+      }
+    },
+    [tarefa.id, update, setStatus, refetchHistorico],
+  );
 
   const handleDownload = async (a: TarefaAnexo) => {
     try {
@@ -109,6 +205,26 @@ export function TarefaDetailDrawer({
       window.open(url, "_blank");
     } catch (e) {
       toast.error((e as Error).message);
+    }
+  };
+
+  // Desfazer todas as alterações inline
+  const handleUndoAll = async () => {
+    const orig = originalRef.current;
+    if (!orig || dirtyFields.size === 0) return;
+    if (!confirm(`Reverter ${dirtyFields.size} alteração(ões) feitas neste drawer?`)) return;
+    const patch: Record<string, unknown> = {};
+    dirtyFields.forEach((f) => {
+      patch[f] = (orig as unknown as Record<string, unknown>)[f] ?? null;
+    });
+    try {
+      await update.mutateAsync({ id: tarefa.id, ...patch } as never);
+      setDirtyFields(new Set());
+      setFieldStatus({});
+      toast.success("Alterações revertidas.");
+      refetchHistorico();
+    } catch (e) {
+      toast.error(`Falha ao reverter: ${(e as Error).message}`);
     }
   };
 
@@ -131,22 +247,36 @@ export function TarefaDetailDrawer({
             <FaseLegalBadge fase={tx.fase_legal} permitido={tx.permitido_antes_registro} />
             {tx.is_marco && <Badge className="bg-warning text-warning-foreground text-[10px]">MARCO</Badge>}
           </SheetDescription>
+          {canManage && dirtyFields.size > 0 && (
+            <div className="flex items-center justify-between gap-2 mt-2 p-2 rounded-md bg-warning/10 border border-warning/30">
+              <span className="text-[11px] text-warning font-medium">
+                {dirtyFields.size} campo{dirtyFields.size > 1 ? "s" : ""} alterado{dirtyFields.size > 1 ? "s" : ""} nesta sessão
+              </span>
+              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={handleUndoAll} disabled={update.isPending}>
+                <Undo2 className="h-3 w-3" />Desfazer alterações
+              </Button>
+            </div>
+          )}
         </SheetHeader>
 
         <div className="space-y-4 mt-5">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Status</Label>
+              <Label className="text-xs flex items-center gap-1">Status <SaveIndicator status={fieldStatus.status ?? "idle"} /></Label>
               <Select
                 value={tarefa.status}
                 disabled={!canManage}
-                onValueChange={(v) =>
-                  update.mutate({
-                    id: tarefa.id,
-                    status: v as never,
-                    data_conclusao: v === "concluida" ? new Date().toISOString() : null,
-                  })
-                }
+                onValueChange={(v) => {
+                  setStatus("status", "saving");
+                  update
+                    .mutateAsync({
+                      id: tarefa.id,
+                      status: v as never,
+                      data_conclusao: v === "concluida" ? new Date().toISOString() : null,
+                    } as never)
+                    .then(() => setStatus("status", "saved"))
+                    .catch(() => setStatus("status", "error"));
+                }}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -155,17 +285,19 @@ export function TarefaDetailDrawer({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1"><User className="h-3 w-3" />Responsável</Label>
+              <Label className="text-xs flex items-center gap-1"><User className="h-3 w-3" />Responsável <SaveIndicator status={fieldStatus.responsavel_papel ?? "idle"} /></Label>
               <Input
                 defaultValue={tx.responsavel_papel ?? ""}
                 placeholder="Ex: Coordenador de campo"
                 disabled={!canManage}
                 className="h-10"
+                maxLength={120}
                 onBlur={(e) => {
                   const val = e.target.value.trim();
-                  if (val !== (tx.responsavel_papel ?? "")) {
-                    update.mutate({ id: tarefa.id, responsavel_papel: val || null } as never);
-                  }
+                  if (val === (tx.responsavel_papel ?? "")) return;
+                  saveField("responsavel_papel", val || null, {
+                    validate: () => (val.length > 120 ? "Responsável deve ter no máximo 120 caracteres." : null),
+                  });
                 }}
               />
             </div>
@@ -174,11 +306,11 @@ export function TarefaDetailDrawer({
           {/* Linha 2: fase legal + marco */}
           <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
             <div className="space-y-1.5">
-              <Label className="text-xs">Fase legal</Label>
+              <Label className="text-xs flex items-center gap-1">Fase legal <SaveIndicator status={fieldStatus.fase_legal ?? "idle"} /></Label>
               <Select
                 value={tx.fase_legal ?? "pre_campanha_legal"}
                 disabled={!canManage}
-                onValueChange={(v) => update.mutate({ id: tarefa.id, fase_legal: v } as never)}
+                onValueChange={(v) => saveField("fase_legal", v)}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -192,60 +324,84 @@ export function TarefaDetailDrawer({
               <Switch
                 checked={!!tx.is_marco}
                 disabled={!canManage}
-                onCheckedChange={(c) => update.mutate({ id: tarefa.id, is_marco: c } as never)}
+                onCheckedChange={(c) => saveField("is_marco", c)}
               />
+              <SaveIndicator status={fieldStatus.is_marco ?? "idle"} />
             </div>
           </div>
 
           <Tabs defaultValue="visao">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className="w-full grid grid-cols-5">
               <TabsTrigger value="visao" className="gap-1 text-xs"><Info className="h-3 w-3" />Visão</TabsTrigger>
               <TabsTrigger value="subs" className="gap-1 text-xs"><ListChecks className="h-3 w-3" />Checklist {subs.length > 0 && `(${subDone}/${subs.length})`}</TabsTrigger>
               <TabsTrigger value="legal" className="gap-1 text-xs"><ScrollText className="h-3 w-3" />Legal</TabsTrigger>
               <TabsTrigger value="docs" className="gap-1 text-xs"><FileText className="h-3 w-3" />Docs ({anexos.length})</TabsTrigger>
+              <TabsTrigger value="hist" className="gap-1 text-xs"><History className="h-3 w-3" />Hist.</TabsTrigger>
             </TabsList>
 
             {/* VISÃO GERAL */}
             <TabsContent value="visao" className="space-y-4 mt-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que é</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  O que é <SaveIndicator status={fieldStatus.o_que_e ?? "idle"} />
+                </Label>
                 <Textarea
                   defaultValue={tx.o_que_e ?? ""}
                   placeholder="Descreva o que é esta tarefa..."
                   disabled={!canManage}
                   rows={2}
+                  maxLength={1000}
                   onBlur={(e) => {
-                    const v = e.target.value;
-                    if (v !== (tx.o_que_e ?? "")) update.mutate({ id: tarefa.id, o_que_e: v || null } as never);
+                    const v = e.target.value.trim();
+                    if (v === (tx.o_que_e ?? "")) return;
+                    saveField("o_que_e", v || null, {
+                      validate: () => (v.length > 1000 ? "Máximo 1000 caracteres." : null),
+                    });
                   }}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que faz / como executar</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  O que faz / como executar <SaveIndicator status={fieldStatus.o_que_faz ?? "idle"} />
+                </Label>
                 <Textarea
                   defaultValue={tx.o_que_faz ?? ""}
                   placeholder="Passo a passo de execução..."
                   disabled={!canManage}
                   rows={3}
+                  maxLength={2000}
                   onBlur={(e) => {
-                    const v = e.target.value;
-                    if (v !== (tx.o_que_faz ?? "")) update.mutate({ id: tarefa.id, o_que_faz: v || null } as never);
+                    const v = e.target.value.trim();
+                    if (v === (tx.o_que_faz ?? "")) return;
+                    saveField("o_que_faz", v || null, {
+                      validate: () => (v.length > 2000 ? "Máximo 2000 caracteres." : null),
+                    });
                   }}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entregáveis</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  Entregáveis <SaveIndicator status={fieldStatus.entregaveis ?? "idle"} />
+                </Label>
                 <Textarea
                   defaultValue={tx.entregaveis ?? ""}
                   placeholder="Um por linha. Ex: Ata assinada · Lista de presença"
                   disabled={!canManage}
                   rows={3}
+                  maxLength={2000}
                   className="font-mono text-xs"
                   onBlur={(e) => {
-                    const v = e.target.value;
-                    if (v !== (tx.entregaveis ?? "")) update.mutate({ id: tarefa.id, entregaveis: v || null } as never);
+                    const normalized = normalizeEntregaveis(e.target.value);
+                    if (normalized !== (tx.entregaveis ?? "").trim()) {
+                      // Atualiza o campo visualmente para o usuário ver a normalização
+                      e.target.value = normalized;
+                      saveField("entregaveis", normalized || null, {
+                        validate: () => (normalized.length > 2000 ? "Máximo 2000 caracteres." : null),
+                      });
+                    }
                   }}
                 />
+                <p className="text-[10px] text-muted-foreground">Quebras de linha em branco são removidas automaticamente.</p>
               </div>
               {tarefa.descricao && !tx.o_que_e && (
                 <div>
@@ -255,7 +411,7 @@ export function TarefaDetailDrawer({
               )}
               <Separator />
               <div className="space-y-1.5">
-                <Label className="text-xs">Observações da execução</Label>
+                <Label className="text-xs flex items-center gap-1">Observações da execução <SaveIndicator status={fieldStatus.observacoes ?? "idle"} /></Label>
                 <Textarea
                   defaultValue={tx.observacoes ?? ""}
                   placeholder="Notas sobre o andamento, decisões, próximos passos..."
@@ -264,7 +420,7 @@ export function TarefaDetailDrawer({
                   onBlur={(e) => {
                     const val = e.target.value;
                     if (val !== (tx.observacoes ?? "")) {
-                      update.mutate({ id: tarefa.id, observacoes: val } as never);
+                      saveField("observacoes" as keyof TarefaExt, val);
                     }
                   }}
                 />
@@ -357,8 +513,9 @@ export function TarefaDetailDrawer({
                     <Switch
                       checked={tx.permitido_antes_registro !== false}
                       disabled={!canManage}
-                      onCheckedChange={(c) => update.mutate({ id: tarefa.id, permitido_antes_registro: c } as never)}
+                      onCheckedChange={(c) => saveField("permitido_antes_registro", c)}
                     />
+                    <SaveIndicator status={fieldStatus.permitido_antes_registro ?? "idle"} />
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
@@ -369,15 +526,21 @@ export function TarefaDetailDrawer({
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Respaldo legal</Label>
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                    Respaldo legal <SaveIndicator status={fieldStatus.respaldo_legal ?? "idle"} />
+                  </Label>
                   {canManage && (
                     <RespaldoLegalPicker
                       onPick={(ref) => {
                         const atual = tx.respaldo_legal ?? "";
-                        const novo = atual
-                          ? `${atual}\n\n${ref.norma} — ${ref.ementa}`
-                          : `${ref.norma} — ${ref.ementa}`;
-                        update.mutate({ id: tarefa.id, respaldo_legal: novo } as never);
+                        const linha = `${ref.norma} — ${ref.ementa}`;
+                        // Evita duplicar referência
+                        if (atual.includes(ref.norma)) {
+                          toast.info("Esta referência já está presente.");
+                          return;
+                        }
+                        const novo = atual ? `${atual}\n\n${linha}` : linha;
+                        saveField("respaldo_legal", novo);
                       }}
                       triggerLabel="Buscar referência"
                     />
@@ -389,10 +552,14 @@ export function TarefaDetailDrawer({
                     key={tx.respaldo_legal ?? "empty"}
                     placeholder="Cite a base legal (Lei 9.504/97, Resoluções TSE...) ou use o botão acima."
                     rows={5}
+                    maxLength={3000}
                     className="text-sm leading-relaxed"
                     onBlur={(e) => {
-                      const v = e.target.value;
-                      if (v !== (tx.respaldo_legal ?? "")) update.mutate({ id: tarefa.id, respaldo_legal: v || null } as never);
+                      const v = e.target.value.trim();
+                      if (v === (tx.respaldo_legal ?? "").trim()) return;
+                      saveField("respaldo_legal", v || null, {
+                        validate: () => (v.length > 3000 ? "Máximo 3000 caracteres." : null),
+                      });
                     }}
                   />
                 ) : (
@@ -478,6 +645,51 @@ export function TarefaDetailDrawer({
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* HISTÓRICO */}
+            <TabsContent value="hist" className="space-y-2 mt-4">
+              <p className="text-[11px] text-muted-foreground">
+                Últimas alterações registradas (fase legal, marco, o que é/faz, entregáveis, respaldo legal e responsável).
+              </p>
+              {historico.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhum registro de auditoria encontrado.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {historico.map((h) => {
+                    const oldD = (h.old_data ?? {}) as Record<string, unknown>;
+                    const newD = (h.new_data ?? {}) as Record<string, unknown>;
+                    const changes = Object.keys(TRACKED_FIELDS).filter(
+                      (k) => JSON.stringify(oldD[k]) !== JSON.stringify(newD[k]),
+                    );
+                    if (h.action === "UPDATE" && changes.length === 0) return null;
+                    return (
+                      <div key={h.id} className="border rounded-md p-2 text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="text-[10px] capitalize">{h.action.toLowerCase()}</Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(h.created_at).toLocaleString("pt-BR")}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-mono truncate">
+                          user: {h.user_id ? h.user_id.slice(0, 8) : "sistema"}
+                        </div>
+                        {changes.length > 0 && (
+                          <ul className="space-y-0.5 mt-1">
+                            {changes.map((k) => (
+                              <li key={k} className="text-[11px]">
+                                <span className="font-semibold">{TRACKED_FIELDS[k]}:</span>{" "}
+                                <span className="line-through text-muted-foreground">{String(oldD[k] ?? "—").slice(0, 60)}</span>{" "}
+                                <span className="text-foreground">→ {String(newD[k] ?? "—").slice(0, 60)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
