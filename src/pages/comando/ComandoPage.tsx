@@ -1,6 +1,8 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useIndicadoresCampanha, useBurndown, useComandoRealtime } from "@/hooks/useComando";
-import { KPIGrid } from "@/components/comando/KPIGrid";
+import { EditableKPIGrid } from "@/components/comando/EditableKPIGrid";
+import { MetasMunicipiosPanel } from "@/components/comando/MetasMunicipiosPanel";
+import { MarcosCriticos } from "@/components/comando/MarcosCriticos";
 import { BurndownChart } from "@/components/comando/BurndownChart";
 import { ReunioesPanel } from "@/components/comando/ReunioesPanel";
 import { Loader2, Radio } from "lucide-react";
@@ -20,7 +22,7 @@ export default function ComandoPage() {
             <h1 className="text-3xl font-bold tracking-tight">Sala de Situação</h1>
             <p className="text-sm text-muted-foreground">
               {indicadores?.campanha_nome
-                ? `Campanha ativa: ${indicadores.campanha_nome}`
+                ? `Campanha ativa: ${indicadores.campanha_nome} · clique nos KPIs para editar`
                 : "Nenhuma campanha ativa configurada."}
             </p>
           </div>
@@ -47,11 +49,16 @@ export default function ComandoPage() {
           </div>
         ) : (
           <>
-            <KPIGrid data={indicadores} />
+            <EditableKPIGrid data={indicadores} />
+
+            <MetasMunicipiosPanel campanhaId={indicadores.campanha_id} metaGlobal={indicadores.meta_votos} />
+
             <div className="grid gap-4 lg:grid-cols-2">
+              <MarcosCriticos campanhaId={indicadores.campanha_id} />
               <BurndownChart data={burndown} />
-              <ReunioesPanel />
             </div>
+
+            <ReunioesPanel />
           </>
         )}
       </div>
