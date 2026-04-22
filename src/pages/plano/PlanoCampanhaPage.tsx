@@ -21,6 +21,10 @@ export default function PlanoCampanhaPage() {
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const currentId = selectedId ?? ativa?.id;
   const { data: campanha } = useCampanha(currentId);
+  const canManage = useCanManage();
+  const updateCampanha = useUpdateCampanha();
+  const [metaOpen, setMetaOpen] = useState(false);
+  const [metaInput, setMetaInput] = useState<string>("");
 
   const duracaoTotal = campanha
     ? Math.max(1, Math.ceil((new Date(campanha.data_eleicao).getTime() - new Date(campanha.data_inicio_plano).getTime()) / 86400000))
