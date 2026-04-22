@@ -316,15 +316,17 @@ export function useAnosDisponiveis(uf: string) {
   return useQuery({
     queryKey: ["tse-anos", uf],
     queryFn: async () => {
-      const [a, b, c] = await Promise.all([
+      const [a, b, c, d] = await Promise.all([
         supabase.from("tse_candidatos").select("ano").eq("uf", uf).limit(5000),
         supabase.from("tse_votacao_candidato_perfil").select("ano").eq("uf", uf).limit(5000),
         supabase.from("tse_eleitorado_perfil").select("ano").eq("uf", uf).limit(5000),
+        supabase.from("campanhas").select("data_eleicao, estados!inner(sigla)").eq("estados.sigla", uf).limit(5000),
       ]);
       const set = new Set<number>();
       for (const r of (a.data ?? []) as any[]) set.add(r.ano);
       for (const r of (b.data ?? []) as any[]) set.add(r.ano);
       for (const r of (c.data ?? []) as any[]) set.add(r.ano);
+      for (const r of (d.data ?? []) as any[]) if (r.data_eleicao) set.add(new Date(r.data_eleicao).getFullYear());
       const anos = Array.from(set).sort((x, y) => y - x);
       return anos.length ? anos : [2024, 2022, 2020, 2018];
     },
