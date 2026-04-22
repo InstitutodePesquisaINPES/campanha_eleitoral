@@ -1377,6 +1377,86 @@ export type Database = {
           },
         ]
       }
+      campanha_tarefa_anexos: {
+        Row: {
+          arquivo_nome: string | null
+          arquivo_tamanho: number | null
+          campanha_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          mime_type: string | null
+          pessoas_anexo_id: string | null
+          storage_path: string
+          tarefa_id: string
+          tipo_documento: string | null
+          titulo: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          arquivo_nome?: string | null
+          arquivo_tamanho?: number | null
+          campanha_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          mime_type?: string | null
+          pessoas_anexo_id?: string | null
+          storage_path: string
+          tarefa_id: string
+          tipo_documento?: string | null
+          titulo: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          arquivo_nome?: string | null
+          arquivo_tamanho?: number | null
+          campanha_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          mime_type?: string | null
+          pessoas_anexo_id?: string | null
+          storage_path?: string
+          tarefa_id?: string
+          tipo_documento?: string | null
+          titulo?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campanha_tarefa_anexos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campanha_tarefa_anexos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "v_cobertura_territorial_campanha"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "campanha_tarefa_anexos_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "v_indicadores_campanha"
+            referencedColumns: ["campanha_id"]
+          },
+          {
+            foreignKeyName: "campanha_tarefa_anexos_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "campanha_tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campanha_tarefas: {
         Row: {
           area: Database["public"]["Enums"]["area_campanha"]
