@@ -4,8 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export type AppRole = "admin" | "coordenador" | "lideranca" | "operador" | "visualizador";
 
+const MANAGE_ROLES: AppRole[] = ["admin", "coordenador", "lideranca", "operador"];
+
 export function useUserRoles() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   return useQuery({
     queryKey: ["user-roles", user?.id],
@@ -18,7 +20,8 @@ export function useUserRoles() {
       if (error) throw error;
       return (data || []).map((r: { role: string }) => r.role as AppRole);
     },
-    enabled: !!user,
+    enabled: !!user && !loading,
+    staleTime: 30_000,
   });
 }
 
@@ -29,4 +32,9 @@ export function useHasRole(role: AppRole) {
 
 export function useIsAdmin() {
   return useHasRole("admin");
+}
+
+export function useCanManage() {
+  const { data: roles = [] } = useUserRoles();
+  return roles.some((role) => MANAGE_ROLES.includes(role));
 }
