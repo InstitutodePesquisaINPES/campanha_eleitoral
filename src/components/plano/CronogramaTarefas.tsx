@@ -584,6 +584,16 @@ function NovaTarefaDialog({
     </Dialog>
   );
 }
+
+function TarefaCard({
+  t, anexos, onOpen, onToggle, canManage, onRemove, onMove, onDuplicate, draggable,
+}: {
+  t: Tarefa; anexos: number; onOpen: () => void;
+  onToggle: (concluida: boolean) => void; canManage: boolean;
+  onRemove: () => void; onMove?: (status: ColKey) => void;
+  onDuplicate?: () => void; draggable?: boolean;
+}) {
+  const tx = t as TarefaExt;
   const concluida = t.status === "concluida";
   const isMarco = !!tx.is_marco;
   const atrasada = t.status === "atrasada" || (t.status !== "concluida" && new Date(t.data_prevista) < new Date(new Date().toDateString()));
