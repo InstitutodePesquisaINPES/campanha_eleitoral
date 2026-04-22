@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+const normalizarTexto = (value?: string | null) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .trim();
+
 export type EleitoralFilters = {
   uf: string;
   ano: number;
@@ -40,6 +48,44 @@ export function useTSECandidatos(filters: EleitoralFilters & { busca?: string; e
   return useQuery({
     queryKey: ["tse-candidatos", filters],
     queryFn: async () => {
+      const { data: campanhasInternas } = await supabase
+        .from("campanhas")
+        .select("id,nome,cargo,numero_urna,partido_sigla,meta_votos,data_eleicao,ativa,municipio_id,estado_id,municipios(nome),estados(sigla,nome)")
+        .order("created_at", { ascending: false });
+
+      const candidatosInternos = (campanhasInternas ?? [])
+        .filter((campanha: any) => {
+          const anoCampanha = campanha.data_eleicao ? new Date(campanha.data_eleicao).getFullYear() : null;
+          const cargoCampanha = normalizarTexto(campanha.cargo);
+          const busca = normalizarTexto(filters.busca);
+          if (anoCampanha !== filters.ano) return false;
+          if (filters.cargo && !cargoCampanha.includes(normalizarTexto(filters.cargo))) return false;
+          if (filters.partido && campanha.partido_sigla !== filters.partido) return false;
+          if (busca && !normalizarTexto(campanha.nome).includes(busca)) return false;
+          return true;
+        })
+        .map((campanha: any) => ({
+          id: `campanha-${campanha.id}`,
+          campanha_id: campanha.id,
+          ano: campanha.data_eleicao ? new Date(campanha.data_eleicao).getFullYear() : filters.ano,
+          uf: campanha.estados?.sigla ?? filters.uf,
+          cargo: String(campanha.cargo).replace(/_/g, " "),
+          cod_municipio_tse: null,
+          partido_sigla: campanha.partido_sigla,
+          numero_urna: campanha.numero_urna,
+          nome_urna: campanha.nome,
+          nome_completo: campanha.nome,
+          cpf: null,
+          votos_recebidos: campanha.meta_votos ?? 0,
+          eleito: false,
+          situacao_eleicao: campanha.ativa ? "Campanha ativa" : "Cadastro interno",
+          genero: null,
+          ocupacao: null,
+          data_nascimento: null,
+          municipio_nome: campanha.municipios?.nome ?? campanha.estados?.nome,
+          fonte: "campanha",
+        }));
+
       let q = supabase
         .from("tse_candidatos")
         .select("id,ano,uf,cargo,cod_municipio_tse,partido_sigla,numero_urna,nome_urna,nome_completo,cpf,votos_recebidos,eleito,situacao_eleicao,genero,ocupacao,data_nascimento")
@@ -54,7 +100,12 @@ export function useTSECandidatos(filters: EleitoralFilters & { busca?: string; e
       if (filters.busca) q = q.or(`nome_completo.ilike.%${filters.busca}%,nome_urna.ilike.%${filters.busca}%`);
       const { data, error } = await q;
       if (error) throw error;
-      if ((data ?? []).length > 0) return data as any[];
+      if ((data ?? []).length > 0) {
+        const listaTse = (data as any[]).map((item) => ({ ...item, fonte: "tse" }));
+        const ids = new Set(listaTse.map((item) => `${normalizarTexto(item.nome_urna ?? item.nome_completo)}|${item.numero_urna ?? ""}`));
+        const internosUnicos = candidatosInternos.filter((item) => !ids.has(`${normalizarTexto(item.nome_urna ?? item.nome_completo)}|${item.numero_urna ?? ""}`));
+        return [...internosUnicos, ...listaTse];
+      }
 
       // Fallback: agrega a partir de tse_votacao_candidato_perfil (CSVs do TSE de votação)
       let q2 = supabase
@@ -97,9 +148,10 @@ export function useTSECandidatos(filters: EleitoralFilters & { busca?: string; e
           });
         }
       }
-      const list = Array.from(agg.values()).sort((a, b) => b.votos_recebidos - a.votos_recebidos);
-      if (typeof filters.eleito === "boolean") return list.filter((c) => c.eleito === filters.eleito);
-      return list;
+      const list = Array.from(agg.values()).map((item) => ({ ...item, fonte: "tse" })).sort((a, b) => b.votos_recebidos - a.votos_recebidos);
+      const merged = [...candidatosInternos, ...list];
+      if (typeof filters.eleito === "boolean") return merged.filter((c) => c.eleito === filters.eleito);
+      return merged;
     },
   });
 }
