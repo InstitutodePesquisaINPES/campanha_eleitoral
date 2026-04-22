@@ -181,7 +181,7 @@ export function CronogramaTarefas({ campanhaId }: { campanhaId: string }) {
   const { data: anexosMap } = useAnexosCount(campanhaId);
   const canManage = useCanManage();
   const update = useUpdateTarefa();
-  const remove = useDeleteTarefaTarefa();
+  const remove = useDeleteTarefa();
   const [filtro, setFiltro] = useState("");
   const [areaFiltro, setAreaFiltro] = useState<string>("todas");
   const [statusFiltro, setStatusFiltro] = useState<string>("todas");
