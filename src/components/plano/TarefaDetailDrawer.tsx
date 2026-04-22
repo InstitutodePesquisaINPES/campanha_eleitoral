@@ -207,27 +207,49 @@ export function TarefaDetailDrawer({
 
             {/* VISÃO GERAL */}
             <TabsContent value="visao" className="space-y-4 mt-4">
-              {tx.o_que_e && (
-                <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que é</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap">{tx.o_que_e}</p>
-                </div>
-              )}
-              {tx.o_que_faz && (
-                <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que faz / como executar</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap">{tx.o_que_faz}</p>
-                </div>
-              )}
-              {tx.entregaveis && (
-                <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entregáveis</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap font-mono text-xs bg-muted/40 p-3 rounded-md">{tx.entregaveis}</p>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que é</Label>
+                <Textarea
+                  defaultValue={tx.o_que_e ?? ""}
+                  placeholder="Descreva o que é esta tarefa..."
+                  disabled={!canManage}
+                  rows={2}
+                  onBlur={(e) => {
+                    const v = e.target.value;
+                    if (v !== (tx.o_que_e ?? "")) update.mutate({ id: tarefa.id, o_que_e: v || null } as never);
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O que faz / como executar</Label>
+                <Textarea
+                  defaultValue={tx.o_que_faz ?? ""}
+                  placeholder="Passo a passo de execução..."
+                  disabled={!canManage}
+                  rows={3}
+                  onBlur={(e) => {
+                    const v = e.target.value;
+                    if (v !== (tx.o_que_faz ?? "")) update.mutate({ id: tarefa.id, o_que_faz: v || null } as never);
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entregáveis</Label>
+                <Textarea
+                  defaultValue={tx.entregaveis ?? ""}
+                  placeholder="Um por linha. Ex: Ata assinada · Lista de presença"
+                  disabled={!canManage}
+                  rows={3}
+                  className="font-mono text-xs"
+                  onBlur={(e) => {
+                    const v = e.target.value;
+                    if (v !== (tx.entregaveis ?? "")) update.mutate({ id: tarefa.id, entregaveis: v || null } as never);
+                  }}
+                />
+              </div>
               {tarefa.descricao && !tx.o_que_e && (
                 <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrição</Label>
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrição original</Label>
                   <p className="text-sm mt-1 whitespace-pre-wrap text-muted-foreground">{tarefa.descricao}</p>
                 </div>
               )}
