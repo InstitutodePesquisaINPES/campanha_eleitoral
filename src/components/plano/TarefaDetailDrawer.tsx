@@ -344,12 +344,22 @@ export function TarefaDetailDrawer({
             {/* RESPALDO LEGAL */}
             <TabsContent value="legal" className="space-y-3 mt-4">
               <div className={`rounded-md border p-3 ${tx.permitido_antes_registro === false ? "bg-destructive/5 border-destructive/30" : "bg-success/5 border-success/30"}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  {tx.permitido_antes_registro === false ? (
-                    <><ShieldAlert className="h-4 w-4 text-destructive" /><span className="text-xs font-semibold text-destructive">Apenas após registro de candidatura no TSE</span></>
-                  ) : (
-                    <><ShieldCheck className="h-4 w-4 text-success" /><span className="text-xs font-semibold text-success">Permitido na pré-campanha</span></>
-                  )}
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {tx.permitido_antes_registro === false ? (
+                      <><ShieldAlert className="h-4 w-4 text-destructive" /><span className="text-xs font-semibold text-destructive">Apenas após registro TSE</span></>
+                    ) : (
+                      <><ShieldCheck className="h-4 w-4 text-success" /><span className="text-xs font-semibold text-success">Permitido na pré-campanha</span></>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[11px] cursor-pointer">Permitido antes do registro</Label>
+                    <Switch
+                      checked={tx.permitido_antes_registro !== false}
+                      disabled={!canManage}
+                      onCheckedChange={(c) => update.mutate({ id: tarefa.id, permitido_antes_registro: c } as never)}
+                    />
+                  </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                   {tx.permitido_antes_registro === false
@@ -357,14 +367,18 @@ export function TarefaDetailDrawer({
                     : "Ação enquadrada como ato preparatório legítimo. Não envolve pedido explícito de voto nem captação de recursos."}
                 </p>
               </div>
-              {tx.respaldo_legal ? (
-                <div>
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Respaldo legal</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap leading-relaxed">{tx.respaldo_legal}</p>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground text-center py-6">Sem respaldo legal cadastrado para esta tarefa.</p>
-              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Respaldo legal</Label>
+                {canManage ? (
+                  <RespaldoLegalPicker
+                    value={tx.respaldo_legal ?? ""}
+                    onChange={(v) => update.mutate({ id: tarefa.id, respaldo_legal: v || null } as never)}
+                    permitidoAntesRegistro={tx.permitido_antes_registro !== false}
+                  />
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{tx.respaldo_legal || "—"}</p>
+                )}
+              </div>
               <p className="text-[10px] text-muted-foreground border-t pt-2">
                 Referências: Lei 9.504/97 · Resoluções TSE 23.607/2019, 23.609/2019, 23.610/2019.
               </p>
