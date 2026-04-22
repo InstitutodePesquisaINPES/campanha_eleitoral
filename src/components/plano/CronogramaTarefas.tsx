@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTarefas, useUpdateTarefa, useCreateTarefa, useDeleteTarefa, type Tarefa } from "@/hooks/useCampanhas";
 import { useCanManage } from "@/hooks/useUserRoles";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,15 +15,27 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Search, Calendar as CalIcon, Plus, Trash2, Paperclip, LayoutGrid, List,
   Flag, ShieldCheck, ShieldAlert, Filter, X, GripVertical, ArrowRight,
-  Info, ListChecks, ScrollText, User as UserIcon, Sparkles,
+  Info, ListChecks, ScrollText, User as UserIcon, Sparkles, Eye, Save, Copy,
+  AlertTriangle, FileWarning, RotateCcw,
 } from "lucide-react";
 import { TarefaDetailDrawer } from "./TarefaDetailDrawer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampanha } from "@/hooks/useCampanhas";
+import { RespaldoLegalPicker } from "./RespaldoLegalPicker";
+import { TarefaPreviewCard } from "./TarefaPreviewCard";
+import {
+  validarSubtarefasTexto,
+  salvarRascunho,
+  carregarRascunho,
+  limparRascunho,
+  tarefaParaFormularioDuplicado,
+} from "@/lib/plano/tarefaUtils";
+import { toast } from "sonner";
 
 const areaColors: Record<string, string> = {
   organizacao: "bg-primary/10 text-primary border-primary/30",
