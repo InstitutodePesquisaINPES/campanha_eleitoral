@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Map, Search, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { InteligenciaNavBar } from "@/components/inteligencia-shared/InteligenciaNavBar";
+import { useCampanhas } from "@/hooks/useCampanhas";
 
 const sitColors: Record<SituacaoBairro, string> = {
   forte: "bg-success/10 text-success border-success/30",
@@ -32,6 +34,8 @@ const prioColors: Record<string, string> = {
 export default function MapaEstrategicoPage() {
   const [municipioId, setMunicipioId] = useState<string>("");
   const [filtro, setFiltro] = useState("");
+  const { data: campanhas = [] } = useCampanhas();
+  const campanhaId = campanhas[0]?.id;
 
   const { data: municipios = [] } = useQuery({
     queryKey: ["municipios-mapa"],
@@ -62,6 +66,8 @@ export default function MapaEstrategicoPage() {
           </h1>
           <p className="text-muted-foreground mt-1">Cobertura por bairro · Situação · Ação recomendada</p>
         </div>
+
+        <InteligenciaNavBar campanhaId={campanhaId} />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card><CardContent className="p-4"><div className="text-2xl font-bold">{stats.total}</div><p className="text-xs text-muted-foreground">Bairros mapeados</p></CardContent></Card>

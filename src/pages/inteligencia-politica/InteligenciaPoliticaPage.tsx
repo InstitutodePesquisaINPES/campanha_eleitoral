@@ -10,6 +10,7 @@ import { MunicipiosEstrategicosTab } from "@/components/inteligencia-politica/Mu
 import { LiderancasTab } from "@/components/inteligencia-politica/LiderancasTab";
 import { VereadoresHistoricosTab } from "@/components/inteligencia-politica/VereadoresHistoricosTab";
 import { ConfiguracaoPlano } from "@/components/plano/ConfiguracaoPlano";
+import { InteligenciaNavBar } from "@/components/inteligencia-shared/InteligenciaNavBar";
 
 export default function InteligenciaPoliticaPage() {
   const { data: campanhas = [] } = useCampanhas();
@@ -41,6 +42,8 @@ export default function InteligenciaPoliticaPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <InteligenciaNavBar campanhaId={campanhaId} />
 
           {!campanhaId ? (
             <Card className="p-8 text-center">

@@ -8,6 +8,7 @@ import { useCampanhas } from "@/hooks/useCampanhas";
 import { useMunicipiosEstrategicos, useLiderancaStats, useVereadorStats, FAIXA_LABEL, CLASS_LABEL, CLASS_COLOR, type FaixaVotos, type ClassificacaoEstrategica } from "@/hooks/useInteligenciaPolitica";
 import { Target, Users, Vote, MapPin, TrendingUp, Crown, Building2, Heart } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { InteligenciaNavBar } from "@/components/inteligencia-shared/InteligenciaNavBar";
 
 export default function PlanoEstrategicoPage() {
   const { data: campanhas = [] } = useCampanhas();
@@ -56,6 +57,8 @@ export default function PlanoEstrategicoPage() {
               </Select>
             </div>
           </div>
+
+          <InteligenciaNavBar campanhaId={campanhaId} />
 
           {/* KPIs principais */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
