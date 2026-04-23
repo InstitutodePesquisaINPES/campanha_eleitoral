@@ -16,7 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Vote, Calendar, Target, Trophy, Flame, Settings2, Flag, Pencil, Save, Activity } from "lucide-react";
+import { Vote, Calendar, Target, Trophy, Flame, Settings2, Flag, Pencil, Save, Activity, Plus } from "lucide-react";
+import { EditarCampanhaDialog } from "@/components/plano/EditarCampanhaDialog";
 
 export default function PlanoCampanhaPage() {
   const { data: ativa } = useCampanhaAtiva();
@@ -53,7 +54,10 @@ export default function PlanoCampanhaPage() {
                 : "Cronograma · Marcos · Fases · Metas · Acompanhamento semanal"}
             </p>
           </div>
-          <CampanhaSelector value={currentId} onChange={setSelectedId} />
+          <div className="flex items-center gap-2">
+            <CampanhaSelector value={currentId} onChange={setSelectedId} />
+            {campanha && canManage && <EditarCampanhaDialog campanha={campanha as never} />}
+          </div>
         </div>
 
         {!campanha ? (
@@ -61,13 +65,21 @@ export default function PlanoCampanhaPage() {
             <CardContent className="py-16 text-center">
               <Vote className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
               <h2 className="text-lg font-semibold mb-1">Nenhuma campanha selecionada</h2>
-              <p className="text-sm text-muted-foreground">Crie uma nova campanha para gerar automaticamente o plano completo (cronograma, fases, semanas, metas e marcos legais).</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Crie uma nova campanha para gerar automaticamente o plano completo (cronograma, fases, semanas, metas e marcos legais TSE).
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <CampanhaSelector value={currentId} onChange={setSelectedId} />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3">
+                Use o botão <strong>“Nova”</strong> ao lado do seletor para criar a primeira campanha.
+              </p>
             </CardContent>
           </Card>
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Card>
+              <Card className="group relative">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-1">
                     <Trophy className="h-4 w-4 text-warning" />
@@ -79,6 +91,14 @@ export default function PlanoCampanhaPage() {
                     {(campanha as any).municipios_foco_ids?.length > 0 && ` · +${(campanha as any).municipios_foco_ids.length} foco`}
                   </p>
                   <p className="text-xs text-muted-foreground">{campanha.numero_urna ? `Nº ${campanha.numero_urna}` : "Sem nº urna"}{campanha.partido_sigla ? ` · ${campanha.partido_sigla}` : ""}</p>
+                  {canManage && (
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                      <EditarCampanhaDialog
+                        campanha={campanha as never}
+                        trigger={<Button size="icon" variant="ghost" className="h-6 w-6"><Pencil className="h-3 w-3" /></Button>}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               <Popover open={metaOpen} onOpenChange={(o) => { setMetaOpen(o); if (o) setMetaInput(String(campanha.meta_votos ?? "")); }}>
