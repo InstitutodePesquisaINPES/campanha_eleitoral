@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Target, Flag, Plus, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Target, Flag, Plus, Trash2, MessageSquare, AlertTriangle, CheckCircle2, TrendingUp } from "lucide-react";
 
 const faseLabels: Record<string, string> = {
   pre_campanha: "Pré-campanha", lancamento: "Lançamento", consolidacao: "Consolidação", reta_final: "Reta Final",
@@ -80,6 +82,39 @@ function NovaMetaDialog({ campanhaId, canManage }: { campanhaId: string; canMana
   );
 }
 
+function ObservacoesPopover({ id, value, canManage, onSave }: { id: string; value: string; canManage: boolean; onSave: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState(value);
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setText(value); }}>
+      <PopoverTrigger asChild>
+        <button
+          className="text-muted-foreground hover:text-foreground p-0.5 disabled:opacity-40"
+          disabled={!canManage}
+          title={value ? "Ver/editar observações" : "Adicionar observações"}
+        >
+          <MessageSquare className={`h-3 w-3 ${value ? "text-info" : ""}`} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end">
+        <Label className="text-xs">Observações da meta</Label>
+        <Textarea
+          rows={4}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="mt-1 text-xs"
+          placeholder="Contexto, justificativa, dependências, riscos..."
+          disabled={!canManage}
+        />
+        <div className="flex justify-end gap-1 mt-2">
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button size="sm" onClick={() => { onSave(text); setOpen(false); }} disabled={!canManage}>Salvar</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function MetasFases({ campanhaId }: { campanhaId: string }) {
   const { data: fases = [] } = useFases(campanhaId);
   const { data: metas = [] } = useMetas(campanhaId);
@@ -89,15 +124,60 @@ export function MetasFases({ campanhaId }: { campanhaId: string }) {
 
   const metasPorFase = (faseKey: string) => metas.filter((m) => m.fase === faseKey);
 
+  // Saúde global
+  const totalMeta = metas.reduce((s, m) => s + (Number(m.valor_meta) || 0), 0);
+  const totalReal = metas.reduce((s, m) => s + (Number(m.valor_realizado) || 0), 0);
+  const pctGlobal = totalMeta > 0 ? Math.round((totalReal / totalMeta) * 100) : 0;
+  const metasAtingidas = metas.filter((m) => Number(m.valor_meta) > 0 && Number(m.valor_realizado) >= Number(m.valor_meta)).length;
+  const metasRisco = metas.filter((m) => {
+    const p = Number(m.valor_meta) > 0 ? (Number(m.valor_realizado) / Number(m.valor_meta)) : 0;
+    return p > 0 && p < 0.5;
+  }).length;
+
   return (
     <div className="space-y-4">
+      {/* SAÚDE GERAL */}
+      {metas.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1"><TrendingUp className="h-4 w-4 text-primary" /><span className="text-xs text-muted-foreground">Saúde geral</span></div>
+              <div className="text-2xl font-bold">{pctGlobal}%</div>
+              <Progress value={pctGlobal} className="h-1.5 mt-1" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1"><Target className="h-4 w-4 text-info" /><span className="text-xs text-muted-foreground">Metas</span></div>
+              <div className="text-2xl font-bold">{metas.length}</div>
+              <p className="text-[10px] text-muted-foreground">{fases.length} fases</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1"><CheckCircle2 className="h-4 w-4 text-success" /><span className="text-xs text-muted-foreground">Atingidas</span></div>
+              <div className="text-2xl font-bold text-success">{metasAtingidas}</div>
+              <p className="text-[10px] text-muted-foreground">de {metas.length}</p>
+            </CardContent>
+          </Card>
+          <Card className={metasRisco > 0 ? "border-destructive/40" : ""}>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1"><AlertTriangle className={`h-4 w-4 ${metasRisco > 0 ? "text-destructive" : "text-muted-foreground"}`} /><span className="text-xs text-muted-foreground">Em risco (&lt;50%)</span></div>
+              <div className={`text-2xl font-bold ${metasRisco > 0 ? "text-destructive" : ""}`}>{metasRisco}</div>
+              <p className="text-[10px] text-muted-foreground">priorizar</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
-          Edite título, indicador, fase, área, meta e realizado diretamente nos cards.
+          Edite título, indicador, fase, área, meta, realizado e observações diretamente nos cards.
           {!canManage && " Seu perfil está em modo somente leitura."}
         </p>
         <NovaMetaDialog campanhaId={campanhaId} canManage={canManage} />
       </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {fases.map((f) => {
           const ms = metasPorFase(f.fase);
@@ -116,28 +196,39 @@ export function MetasFases({ campanhaId }: { campanhaId: string }) {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {new Date(f.data_inicio).toLocaleDateString("pt-BR")} → {new Date(f.data_fim).toLocaleDateString("pt-BR")}
+                  {" · "}{Math.max(0, Math.ceil((new Date(f.data_fim).getTime() - new Date(f.data_inicio).getTime()) / 86400000))} dias
                 </p>
                 {f.foco && <p className="text-xs text-muted-foreground italic">{f.foco}</p>}
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Progresso geral da fase</span>
-                    <span className="font-medium">{pct}%</span>
+                    <span className="text-muted-foreground">Progresso geral · {ms.length} metas</span>
+                    <span className={`font-medium ${pct >= 80 ? "text-success" : pct >= 50 ? "" : pct > 0 ? "text-warning" : "text-muted-foreground"}`}>{pct}%</span>
                   </div>
                   <Progress value={pct} className="h-2" />
                 </div>
                 <div className="space-y-2">
                   {ms.map((m) => {
                     const p = Number(m.valor_meta) > 0 ? Math.min(100, Math.round((Number(m.valor_realizado) / Number(m.valor_meta)) * 100)) : 0;
+                    const tone = p >= 100 ? "bg-success/10 text-success border-success/30"
+                      : p >= 50 ? "bg-info/10 text-info border-info/30"
+                      : p > 0 ? "bg-warning/10 text-warning border-warning/30"
+                      : "bg-muted text-muted-foreground";
                     return (
                       <div key={m.id} className="border border-border rounded-md p-2.5 space-y-2">
                         <div className="flex items-start justify-between gap-2 mb-1.5">
                           <div className="min-w-0">
-                            <p className="text-[10px] text-muted-foreground">Meta editável</p>
+                            <p className="text-[10px] text-muted-foreground">Meta editável · clique para editar</p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
-                            <Badge variant="outline" className="text-[10px]">{p}%</Badge>
+                            <Badge variant="outline" className={`text-[10px] ${tone}`}>{p}%</Badge>
+                            <ObservacoesPopover
+                              id={m.id}
+                              value={m.observacoes ?? ""}
+                              canManage={canManage}
+                              onSave={(v) => update.mutate({ id: m.id, observacoes: v || null } as never)}
+                            />
                             <button
                               onClick={() => canManage && confirm(`Remover meta "${m.meta}"?`) && remove.mutate(m.id)}
                               disabled={!canManage}
@@ -149,56 +240,78 @@ export function MetasFases({ campanhaId }: { campanhaId: string }) {
                           </div>
                         </div>
                         <div className="grid gap-2 md:grid-cols-2">
-                          <Input
-                            className="h-8 text-xs"
-                            defaultValue={m.meta}
-                            disabled={!canManage}
-                            onBlur={(e) => {
-                              const v = e.target.value.trim();
-                              if (v && v !== m.meta) update.mutate({ id: m.id, meta: v });
-                            }}
-                          />
-                          <Input
-                            className="h-8 text-xs"
-                            defaultValue={m.indicador}
-                            disabled={!canManage}
-                            onBlur={(e) => {
-                              const v = e.target.value.trim();
-                              if (v && v !== m.indicador) update.mutate({ id: m.id, indicador: v });
-                            }}
-                          />
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Meta (descrição)</Label>
+                            <Input
+                              className="h-8 text-xs"
+                              defaultValue={m.meta}
+                              disabled={!canManage}
+                              onBlur={(e) => {
+                                const v = e.target.value.trim();
+                                if (v && v !== m.meta) update.mutate({ id: m.id, meta: v });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Indicador</Label>
+                            <Input
+                              className="h-8 text-xs"
+                              defaultValue={m.indicador}
+                              disabled={!canManage}
+                              onBlur={(e) => {
+                                const v = e.target.value.trim();
+                                if (v && v !== m.indicador) update.mutate({ id: m.id, indicador: v });
+                              }}
+                            />
+                          </div>
                         </div>
                         <div className="grid gap-2 md:grid-cols-4">
-                          <Select value={m.fase} onValueChange={(v) => canManage && update.mutate({ id: m.id, fase: v as never })} disabled={!canManage}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>{FASES.map(f => <SelectItem key={f} value={f}>{faseLabels[f]}</SelectItem>)}</SelectContent>
-                          </Select>
-                          <Select value={m.area} onValueChange={(v) => canManage && update.mutate({ id: m.id, area: v as never })} disabled={!canManage}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>{AREAS.map(a => <SelectItem key={a} value={a} className="capitalize">{a}</SelectItem>)}</SelectContent>
-                          </Select>
-                          <Input
-                            type="number"
-                            className="h-8 text-xs"
-                            defaultValue={Number(m.valor_meta)}
-                            disabled={!canManage}
-                            onBlur={(e) => {
-                              const v = Number(e.target.value);
-                              if (v !== Number(m.valor_meta)) update.mutate({ id: m.id, valor_meta: v });
-                            }}
-                          />
-                          <Input
-                            type="number"
-                            className="h-8 text-xs"
-                            defaultValue={Number(m.valor_realizado)}
-                            disabled={!canManage}
-                            onBlur={(e) => {
-                              const v = Number(e.target.value);
-                              if (v !== Number(m.valor_realizado)) update.mutate({ id: m.id, valor_realizado: v });
-                            }}
-                          />
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Fase</Label>
+                            <Select value={m.fase} onValueChange={(v) => canManage && update.mutate({ id: m.id, fase: v as never })} disabled={!canManage}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>{FASES.map(f => <SelectItem key={f} value={f}>{faseLabels[f]}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Área</Label>
+                            <Select value={m.area} onValueChange={(v) => canManage && update.mutate({ id: m.id, area: v as never })} disabled={!canManage}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>{AREAS.map(a => <SelectItem key={a} value={a} className="capitalize">{a}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Valor meta</Label>
+                            <Input
+                              type="number"
+                              className="h-8 text-xs"
+                              defaultValue={Number(m.valor_meta)}
+                              disabled={!canManage}
+                              onBlur={(e) => {
+                                const v = Number(e.target.value);
+                                if (v !== Number(m.valor_meta)) update.mutate({ id: m.id, valor_meta: v });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Realizado</Label>
+                            <Input
+                              type="number"
+                              className="h-8 text-xs"
+                              defaultValue={Number(m.valor_realizado)}
+                              disabled={!canManage}
+                              onBlur={(e) => {
+                                const v = Number(e.target.value);
+                                if (v !== Number(m.valor_realizado)) update.mutate({ id: m.id, valor_realizado: v });
+                              }}
+                            />
+                          </div>
                         </div>
-                        <p className="text-[10px] text-muted-foreground">Meta: {Number(m.valor_meta).toLocaleString("pt-BR")} · Realizado: {Number(m.valor_realizado).toLocaleString("pt-BR")}</p>
+                        {m.observacoes && (
+                          <p className="text-[10px] text-muted-foreground italic border-l-2 border-info pl-1.5">
+                            💬 {m.observacoes}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
