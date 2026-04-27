@@ -83,6 +83,9 @@ export function TSEImportTab() {
       {/* Upload de CSV */}
       <TSECsvUpload />
 
+      {/* Fila de CSVs arquivados (background, com retomada automática) */}
+      <TSECsvArquivosList />
+
       {/* Resumo do que já existe */}
       <TSEDadosResumo />
 
