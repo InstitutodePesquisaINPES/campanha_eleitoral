@@ -46,6 +46,28 @@ const ON_CONFLICT: Record<string, string | undefined> = {
   tse_votacao_candidato_perfil: undefined,
 };
 
+// ----- Detecção automática inteligente do tipo via header -----
+function normKey(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+}
+
+function detectTipoFromHeader(headerLine: string): Tipo | null {
+  const headers = headerLine.split(";").map((h) => h.replace(/^"|"$/g, "").trim());
+  const H = new Set(headers.map(normKey));
+  const has = (...ks: string[]) => ks.every((k) => H.has(normKey(k)));
+  const hasAny = (...ks: string[]) => ks.some((k) => H.has(normKey(k)));
+
+  if (has("Nome candidato", "Votos nominais") && hasAny("Cor/raça", "Faixa etária", "Gênero", "Grau de instrução"))
+    return "votacao_candidato_perfil";
+  if (hasAny("Quantidade de eleitores") && hasAny("Cor / Raça", "Faixa etária", "Gênero", "Grau de instrução"))
+    return "eleitorado_perfil";
+  if (hasAny("NM_LOCAL_VOTACAO", "DS_LOCAL_VOTACAO", "NR_LOCAL_VOTACAO")) return "locais";
+  if (hasAny("NM_URNA_CANDIDATO", "NM_CANDIDATO") && hasAny("DS_CARGO", "CD_CARGO")) return "candidatos";
+  if (hasAny("QT_VOTOS") && hasAny("NR_VOTAVEL")) return "resultados";
+  if (hasAny("QT_ELEITORES_PERFIL", "QT_ELEITORES")) return "eleitorado";
+  return null;
+}
+
 // ----- helpers de parse -----
 function n(v: any): number | null {
   if (v === undefined || v === null || v === "" || v === "#NULO#" || v === "#NE#") return null;
