@@ -523,6 +523,9 @@ async function downloadOneRange(
   const res = await fetch(data.signedUrl, {
     headers: { Range: `bytes=${start}-${end}` },
   });
+  if (res.status === 429 || res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504) {
+    throw new TransientStorageError(`storage range ${start}-${end} (${path}): HTTP ${res.status}`);
+  }
   if (!res.ok && res.status !== 206 && res.status !== 200) {
     throw new Error(`storage range ${start}-${end} (${path}): HTTP ${res.status}`);
   }
