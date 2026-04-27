@@ -302,92 +302,66 @@ Deno.serve(async (req) => {
     if (cursor < totalBytes) {
       const end = Math.min(totalBytes - 1, cursor + RANGE_BYTES - 1);
       const bytes = await downloadRange(admin, partsInfo, cursor, end);
-      if (bytes.byteLength === 0) {
-        await admin
-          .from("tse_csv_arquivos")
-          .update({ ultima_atividade_em: new Date().toISOString() })
-          .eq("id", arquivo.id);
-      } else {
-      // Mantém o cursor no início da linha incompleta e rebaixa essa linha no próximo range.
-      // Não concatenamos leftover para não duplicar pedaços de linhas entre chunks.
-      const text = decoder.decode(bytes);
 
-      // separa em linhas; última pode estar incompleta -> guarda
-      const lastNl = text.lastIndexOf("\n");
-      const isFinalRange = cursor + bytes.byteLength >= totalBytes;
-      const completePart = lastNl >= 0 ? text.slice(0, lastNl) : isFinalRange ? text : "";
+      if (bytes.byteLength > 0) {
+        const text = decoder.decode(bytes);
+        const lastNl = text.lastIndexOf("\n");
+        const isFinalRange = cursor + bytes.byteLength >= totalBytes;
+        const completePart = lastNl >= 0 ? text.slice(0, lastNl) : isFinalRange ? text : "";
 
-      if (completePart.length === 0) {
-        cursor += bytes.byteLength;
-      } else {
+        if (completePart.length > 0) {
+          const csvBlock = header + "\n" + completePart;
+          let rows: any[];
+          try {
+            rows = parse(csvBlock, {
+              delimiter: ";",
+              columns: true,
+              relax_quotes: true,
+              relax_column_count: true,
+              skip_empty_lines: true,
+              bom: true,
+              trim: false,
+            });
+          } catch (err) {
+            await admin
+              .from("tse_csv_arquivos")
+              .update({
+                status: "erro",
+                error_msg: "parse: " + (err as Error).message,
+                ultima_atividade_em: new Date().toISOString(),
+              })
+              .eq("id", arquivo.id);
+            return json({ ok: false, error: "parse error", arquivo: arquivo.id });
+          }
 
-      // Parseia este pedaço (header + linhas) — anexa header pra ter colunas nomeadas
-      const csvBlock = header + "\n" + completePart;
-      let rows: any[];
-      try {
-        rows = parse(csvBlock, {
-          delimiter: ";",
-          columns: true,
-          relax_quotes: true,
-          relax_column_count: true,
-          skip_empty_lines: true,
-          bom: true,
-          trim: false,
-        });
-      } catch (err) {
-        // erro de parse de bloco — sinaliza e para o arquivo
-        await admin
-          .from("tse_csv_arquivos")
-          .update({
-            status: "erro",
-            error_msg: "parse: " + (err as Error).message,
-            ultima_atividade_em: new Date().toISOString(),
-          })
-          .eq("id", arquivo.id);
-        return json({ ok: false, error: "parse error", arquivo: arquivo.id });
-      }
+          for (const row of rows) {
+            if (!matchMunicipio(row, filtro)) continue;
+            const mapped = mapRow(tipo, arquivo.ano, arquivo.uf, row);
+            if (!mapped) continue;
+            buffer.push(mapped);
+            if (buffer.length >= Math.min(arquivo.chunk_size ?? SUBLOTE, SUBLOTE)) {
+              const count = buffer.length;
+              const ins = await flushBuffer(admin, tabela, buffer, onConflict);
+              totalInseridoSessao += ins;
+              linhasProcessadas += count;
+              buffer = [];
+            }
+          }
 
-      for (const row of rows) {
-        if (!matchMunicipio(row, filtro)) continue;
-        const mapped = mapRow(tipo, arquivo.ano, arquivo.uf, row);
-        if (!mapped) continue;
-        buffer.push(mapped);
-        if (buffer.length >= arquivo.chunk_size) {
-          const ins = await flushBuffer(admin, tabela, buffer, onConflict);
-          totalInseridoSessao += ins;
-          linhasProcessadas += buffer.length;
-          buffer = [];
+          if (buffer.length > 0) {
+            const count = buffer.length;
+            const ins = await flushBuffer(admin, tabela, buffer, onConflict);
+            totalInseridoSessao += ins;
+            linhasProcessadas += count;
+            buffer = [];
+          }
+
+          (rows as any).length = 0;
+          const advanceBytes = isFinalRange && lastNl < 0 ? bytes.byteLength : byteLengthLatin1(completePart) + 1;
+          cursor += Math.min(bytes.byteLength, advanceBytes);
+        } else {
+          cursor += bytes.byteLength;
         }
-      }
-      // Flush imediato ao fim de cada range para não acumular memória entre iterações
-      if (buffer.length > 0) {
-        const ins = await flushBuffer(admin, tabela, buffer, onConflict);
-        totalInseridoSessao += ins;
-        linhasProcessadas += buffer.length;
-        buffer = [];
-      }
-      // libera referências grandes antes do próximo range
-      (rows as any).length = 0;
-      // avança cursor pelos bytes consumidos do range (apenas a parte completa)
-      // Mais simples e correto: avançamos pela parte completa em bytes (sem o header que adicionamos manualmente)
-      const advanceBytes = byteLengthLatin1(completePart) + 1; // +1 do \n final
-      cursor += Math.min(bytes.byteLength, advanceBytes);
-      // Garante progresso mínimo
-      if (cursor <= arquivo.byte_cursor) cursor = arquivo.byte_cursor + bytes.byteLength;
-
-      // Persiste cursor (a cada range) para poder retomar em queda
-      const pct = arquivo.tamanho_bytes
-        ? Math.min(99, Math.round((cursor / arquivo.tamanho_bytes) * 100))
-        : 0;
-      await admin
-        .from("tse_csv_arquivos")
-        .update({
-          byte_cursor: cursor,
-          linhas_processadas: linhasProcessadas,
-          progress_pct: pct,
-          ultima_atividade_em: new Date().toISOString(),
-        })
-        .eq("id", arquivo.id);
       }
     }
 
