@@ -16,9 +16,17 @@ const corsHeaders = {
 };
 
 const BUCKET = "tse-csv-uploads";
-const RANGE_BYTES = 256 * 1024; // 256KB por execução — mantém CPU abaixo do limite do Edge Runtime
+const RANGE_BYTES = 64 * 1024; // 64KB por execução — evita 504 do Storage e estouro de CPU
 const STALE_PROCESSING_MS = 2 * 60_000;
-const SUBLOTE = 50;
+const SUBLOTE = 25;
+const MAX_LINES_PER_RUN = 150;
+
+class TransientStorageError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TransientStorageError";
+  }
+}
 
 type Tipo =
   | "eleitorado_perfil"
@@ -238,23 +246,32 @@ Deno.serve(async (req) => {
       .limit(1);
     if (e1) throw e1;
 
-    const arquivo = arquivos?.[0];
-    arquivoAtual = arquivo;
-    if (!arquivo) {
+    const candidato = arquivos?.[0];
+    arquivoAtual = candidato;
+    if (!candidato) {
       return json({ ok: true, picked: 0, msg: "sem arquivos pendentes" });
     }
 
-    // Marca como processando + incrementa attempts. Cada chamada processa só um slice curto e sai.
-    await admin
+    // Claim atômico: evita duas abas/intervalos processarem o mesmo cursor em paralelo.
+    const claimFilter = `status.eq.aguardando,and(status.eq.processando,ultima_atividade_em.lt.${staleIso})`;
+    const { data: arquivo, error: claimError } = await admin
       .from("tse_csv_arquivos")
       .update({
         status: "processando",
-        started_at: arquivo.started_at ?? new Date().toISOString(),
+        started_at: candidato.started_at ?? new Date().toISOString(),
         ultima_atividade_em: new Date().toISOString(),
-        attempts: (arquivo.attempts ?? 0) + 1,
+        attempts: (candidato.attempts ?? 0) + 1,
         error_msg: null,
       })
-      .eq("id", arquivo.id);
+      .eq("id", candidato.id)
+      .or(claimFilter)
+      .select("*")
+      .maybeSingle();
+    if (claimError) throw claimError;
+    if (!arquivo) {
+      return json({ ok: true, picked: 0, msg: "arquivo já está em processamento" });
+    }
+    arquivoAtual = arquivo;
 
     let tipo = arquivo.tipo as Tipo;
     let tabela = arquivo.tabela_destino as string;
