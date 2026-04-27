@@ -1,8 +1,8 @@
 // Edge Function: tse-csv-worker
 // Worker em background que processa CSVs do TSE arquivados no Storage.
 // - Pega 1 arquivo em status 'aguardando' ou 'processando' por execução
-// - Faz range download (5 MB por vez) do storage
-// - Parseia CSV, mapeia para schema da tabela TSE, ingere em lotes de 500
+// - Faz range download pequeno por execução para respeitar o limite de CPU das Edge Functions
+// - Parseia CSV, mapeia para schema da tabela TSE, ingere em sublotes pequenos
 // - Atualiza byte_cursor + linhas_processadas a cada lote (retomada exata)
 // - Time budget de ~50s; se não acabar, sai mantendo status 'processando'
 // - O cron pg_cron chama essa função a cada 1 min automaticamente
@@ -16,9 +16,9 @@ const corsHeaders = {
 };
 
 const BUCKET = "tse-csv-uploads";
-const RANGE_BYTES = 1 * 1024 * 1024; // 1MB por chunk — evita estouro de memória do worker
-const TIME_BUDGET_MS = 40_000;
-const SUBLOTE = 100;
+const RANGE_BYTES = 64 * 1024; // 64KB por execução — mantém CPU abaixo do limite do Edge Runtime
+const STALE_PROCESSING_MS = 2 * 60_000;
+const SUBLOTE = 50;
 
 type Tipo =
   | "eleitorado_perfil"
