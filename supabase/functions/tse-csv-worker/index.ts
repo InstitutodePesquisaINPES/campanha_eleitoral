@@ -317,8 +317,21 @@ Deno.serve(async (req) => {
 
     // 3) Processa apenas um slice curto por chamada. O cron/cliente chama de novo e retoma pelo cursor.
     if (cursor < totalBytes) {
-      const end = Math.min(totalBytes - 1, cursor + RANGE_BYTES - 1);
-      const bytes = await downloadRange(admin, partsInfo, cursor, end);
+      let bytes = new Uint8Array();
+      let requestedEnd = Math.min(totalBytes - 1, cursor + RANGE_BYTES - 1);
+
+      // Se um range específico do Storage der 504, reduzimos o range nesta mesma execução
+      // e tentamos novamente sem marcar o arquivo como erro definitivo.
+      for (let size = RANGE_BYTES; size >= 8 * 1024; size = Math.floor(size / 2)) {
+        requestedEnd = Math.min(totalBytes - 1, cursor + size - 1);
+        try {
+          bytes = await downloadRange(admin, partsInfo, cursor, requestedEnd);
+          break;
+        } catch (err) {
+          if (!(err instanceof TransientStorageError) || size <= 8 * 1024) throw err;
+          console.warn(`[storage transient] ${(err as Error).message}; retrying smaller range=${Math.floor(size / 2)}`);
+        }
+      }
 
       if (bytes.byteLength > 0) {
         const text = decoder.decode(bytes);
@@ -363,6 +376,7 @@ Deno.serve(async (req) => {
               linhasProcessadas += count;
               buffer = [];
             }
+            if (linhasProcessadas >= (arquivo.linhas_processadas ?? 0) + MAX_LINES_PER_RUN) break;
           }
 
           if (buffer.length > 0) {
@@ -374,8 +388,9 @@ Deno.serve(async (req) => {
           }
 
           (rows as any).length = 0;
+          const processedAllRowsInBlock = linhasProcessadas < (arquivo.linhas_processadas ?? 0) + MAX_LINES_PER_RUN;
           const advanceBytes = isFinalRange && lastNl < 0 ? bytes.byteLength : byteLengthLatin1(completePart) + 1;
-          cursor += Math.min(bytes.byteLength, advanceBytes);
+          if (processedAllRowsInBlock) cursor += Math.min(bytes.byteLength, advanceBytes);
         } else {
           cursor += bytes.byteLength;
         }
