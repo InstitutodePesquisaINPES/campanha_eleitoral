@@ -100,10 +100,10 @@ export function useDashboardKPIs() {
         (supabase as any).from("contratos").select("id", { count: "exact", head: true })
           .lte("data_fim", proximos30).eq("status", "vigente"),
         (supabase as any).from("comunicacao_pecas").select("id", { count: "exact", head: true })
-          .in("status", ["em_producao", "aprovacao_juridica", "aprovacao_candidato"]),
+          .in("status", ["rascunho", "em_revisao", "aprovacao_juridica"]),
         (supabase as any).from("comunicacao_mencoes").select("id", { count: "exact", head: true })
-          .in("status", ["nova", "em_resposta"]),
-        (supabase as any).from("liderancas_municipais").select("id", { count: "exact", head: true })
+          .in("status", ["novo", "em_analise", "escalado"]),
+        (supabase as any).from("liderancas_locais").select("id", { count: "exact", head: true })
           .eq("classificacao", "A"),
       ]);
 
