@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import Papa from "papaparse";
-import * as tus from "tus-js-client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,6 @@ import { arquivarCsvParaProcessamento, type TseCsvTipo } from "@/hooks/useTSECsv
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 const ANOS = [2024, 2022, 2020, 2018, 2016];
-const TSE_UPLOAD_PROGRESS_START = 2;
 
 type TipoDado =
   | "eleitorado"
@@ -253,7 +251,7 @@ export function TSECsvUpload() {
       preview: 1,
       complete: (res) => {
         const headers = (res.meta.fields ?? []) as string[];
-        const det = detectTipo(headers);
+        const det = detectTipo(headers, f.name);
         if (det) {
           setTipoDetectado(det);
           setAutoDetect(true);
