@@ -5208,6 +5208,9 @@ export type Database = {
           linhas_processadas: number
           municipios_filtro: string[] | null
           nome_original: string
+          parts_paths: Json
+          parts_sizes: Json
+          parts_total: number
           progress_pct: number
           started_at: string | null
           status: string
@@ -5234,6 +5237,9 @@ export type Database = {
           linhas_processadas?: number
           municipios_filtro?: string[] | null
           nome_original: string
+          parts_paths?: Json
+          parts_sizes?: Json
+          parts_total?: number
           progress_pct?: number
           started_at?: string | null
           status?: string
@@ -5260,6 +5266,9 @@ export type Database = {
           linhas_processadas?: number
           municipios_filtro?: string[] | null
           nome_original?: string
+          parts_paths?: Json
+          parts_sizes?: Json
+          parts_total?: number
           progress_pct?: number
           started_at?: string | null
           status?: string
