@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import Papa from "papaparse";
+import * as tus from "tus-js-client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { arquivarCsvParaProcessamento, type TseCsvTipo } from "@/hooks/useTSECsv
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 const ANOS = [2024, 2022, 2020, 2018, 2016];
+const TSE_UPLOAD_PROGRESS_START = 2;
 
 type TipoDado =
   | "eleitorado"
@@ -27,15 +29,19 @@ type TipoDado =
   | "eleitorado_perfil"
   | "votacao_candidato_perfil";
 
-// Detecção automática do tipo de dado pelo cabeçalho do CSV
-function detectTipo(headers: string[]): TipoDado | null {
+// Detecção automática do tipo de dado pelo cabeçalho do CSV + nome do arquivo
+function detectTipo(headers: string[], filename = ""): TipoDado | null {
   const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   const H = new Set(headers.map(norm));
   const has = (...ks: string[]) => ks.every((k) => H.has(norm(k)));
   const hasAny = (...ks: string[]) => ks.some((k) => H.has(norm(k)));
+  const file = norm(filename);
 
-  if (has("Nome candidato", "Votos nominais") && hasAny("Cor/raça", "Faixa etária", "Gênero", "Grau de instrução")) return "votacao_candidato_perfil";
-  if (has("Quantidade de eleitores") && hasAny("Cor / Raça", "Faixa etária", "Gênero", "Grau de instrução")) return "eleitorado_perfil";
+  if (file.includes("votacaocandidato") || (has("Nome candidato", "Votos nominais") && hasAny("Cor/raça", "Faixa etária", "Gênero", "Grau de instrução"))) return "votacao_candidato_perfil";
+  if (file.includes("perfileleitorado") || file.includes("eleitoradoeleicao") || (hasAny("Quantidade de eleitores", "QT_ELEITORES_PERFIL") && hasAny("Cor / Raça", "DS_COR_RACA", "Faixa etária", "DS_FAIXA_ETARIA", "Gênero", "DS_GENERO", "Grau de instrução", "DS_GRAU_ESCOLARIDADE"))) return "eleitorado_perfil";
+  if (file.includes("eleitoradolocalvotacao")) return "locais";
+  if (file.includes("consultacand")) return "candidatos";
+  if (file.includes("votacaosecao")) return "resultados";
   if (hasAny("NM_LOCAL_VOTACAO", "DS_LOCAL_VOTACAO")) return "locais";
   if (hasAny("NM_URNA_CANDIDATO", "NM_CANDIDATO") && hasAny("DS_CARGO", "CD_CARGO")) return "candidatos";
   if (hasAny("QT_VOTOS") && hasAny("NR_VOTAVEL")) return "resultados";
@@ -64,6 +70,14 @@ function str(v: any): string | null {
   const s = String(v).trim();
   if (!s || s === "#NULO#" || s === "#NE#") return null;
   return s;
+}
+
+function dateStr(v: any): string | null {
+  const value = str(v);
+  if (!value) return null;
+  const br = value.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  return value;
 }
 
 // Helper: lookup value by case/diacritic-insensitive header match
