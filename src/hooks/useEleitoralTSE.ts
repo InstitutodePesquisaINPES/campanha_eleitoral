@@ -285,6 +285,7 @@ export function useEleitoradoPerfil(uf: string, ano: number, municipio?: string)
         estado_civil: { name: string; value: number }[];
       };
     },
+    refetchInterval: 10000,
   });
 }
 
@@ -303,6 +304,7 @@ export function useVotosPorSecao(filters: { ano: number; uf: string; cod_municip
       if (error) throw error;
       return (data ?? []) as any[];
     },
+    refetchInterval: 10000,
   });
 }
 
@@ -321,6 +323,7 @@ export function useLocaisVotacao(uf: string, ano: number, cod_municipio_tse?: st
       if (error) throw error;
       return (data ?? []) as any[];
     },
+    refetchInterval: 10000,
   });
 }
 
@@ -357,6 +360,7 @@ export function useTSEComparativo(uf: string, municipio?: string, cargo?: string
         ano: number; total_eleitores: number; total_candidatos: number; total_eleitos: number; total_votos_nominais: number;
       }>;
     },
+    refetchInterval: 10000,
   });
 }
 
@@ -372,6 +376,7 @@ export function useTSEOrigemVotosLocal(filters: { ano: number; uf: string; cod_m
       if (error) throw error;
       return (data ?? []) as any[];
     },
+    refetchInterval: 10000,
   });
 }
 
