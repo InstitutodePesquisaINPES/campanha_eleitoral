@@ -208,6 +208,10 @@ export function TSECsvUpload() {
   const tipoEfetivo: TipoDado = autoDetect && tipoDetectado ? tipoDetectado : tipo;
   const tabela = TIPOS.find((t) => t.value === tipoEfetivo)!.tabela;
 
+  // Modo de processamento
+  const [modo, setModo] = useState<"background" | "inline">("background");
+  const [archiving, setArchiving] = useState(false);
+
   // Filtro por município (para CSVs imensos como votação por seção / locais)
   const [scanningMun, setScanningMun] = useState(false);
   const [municipiosDisponiveis, setMunicipiosDisponiveis] = useState<{ codigo: string; nome: string }[]>([]);
