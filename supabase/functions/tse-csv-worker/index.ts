@@ -248,26 +248,38 @@ Deno.serve(async (req) => {
       })
       .eq("id", arquivo.id);
 
-    const tipo = arquivo.tipo as Tipo;
-    const tabela = arquivo.tabela_destino as string;
-    const onConflict = ON_CONFLICT[tabela];
+    let tipo = arquivo.tipo as Tipo;
+    let tabela = arquivo.tabela_destino as string;
+    let onConflict = ON_CONFLICT[tabela];
 
     // 2) Garante que temos o header (linha 1) salvo no registro
     let header = arquivo.header_line as string | null;
     if (!header) {
-      // Baixa os primeiros 64KB para extrair header
       const headBytes = await downloadRange(admin, arquivo.storage_path, 0, 64 * 1024 - 1);
       const headText = decoder.decode(headBytes);
       const idxNl = headText.indexOf("\n");
       if (idxNl < 0) throw new Error("CSV sem quebras de linha nos primeiros 64KB");
       header = headText.slice(0, idxNl).replace(/\r$/, "");
-      const headerBytesLen = byteLengthLatin1(header) + 1; // +1 do \n
+      const headerBytesLen = byteLengthLatin1(header) + 1;
       await admin
         .from("tse_csv_arquivos")
         .update({ header_line: header, byte_cursor: Math.max(arquivo.byte_cursor, headerBytesLen) })
         .eq("id", arquivo.id);
       arquivo.header_line = header;
       arquivo.byte_cursor = Math.max(arquivo.byte_cursor, headerBytesLen);
+    }
+
+    // 2.5) AUTO-DETECÇÃO INTELIGENTE: corrige tipo se usuário escolheu errado
+    const tipoDetectado = detectTipoFromHeader(header);
+    if (tipoDetectado && tipoDetectado !== tipo) {
+      console.log(`[auto-detect] tipo informado=${tipo} → corrigido=${tipoDetectado}`);
+      tipo = tipoDetectado;
+      tabela = TABELA_DESTINO[tipo];
+      onConflict = ON_CONFLICT[tabela];
+      await admin
+        .from("tse_csv_arquivos")
+        .update({ tipo, tabela_destino: tabela })
+        .eq("id", arquivo.id);
     }
 
     let cursor: number = arquivo.byte_cursor;
