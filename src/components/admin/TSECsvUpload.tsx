@@ -70,14 +70,6 @@ function str(v: any): string | null {
   return s;
 }
 
-function dateStr(v: any): string | null {
-  const value = str(v);
-  if (!value) return null;
-  const br = value.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
-  return value;
-}
-
 // Helper: lookup value by case/diacritic-insensitive header match
 function pick(row: any, ...keys: string[]): any {
   for (const k of keys) {
@@ -648,6 +640,7 @@ export function TSECsvUpload() {
               onClick={async () => {
                 if (!file) { toast.error("Selecione um arquivo"); return; }
                 setArchiving(true);
+                setProgress(0);
                 setErro(null);
                 try {
                   const arq = await arquivarCsvParaProcessamento({
@@ -656,6 +649,7 @@ export function TSECsvUpload() {
                     ano,
                     uf,
                     municipios_filtro: municipiosSelecionados.size > 0 ? Array.from(municipiosSelecionados) : null,
+                    onProgress: setProgress,
                   });
                   toast.success(`Arquivo enviado para a fila (${arq.id.slice(0, 8)}). Acompanhe abaixo.`);
                   setFile(null);
