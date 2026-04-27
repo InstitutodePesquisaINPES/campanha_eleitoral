@@ -19,7 +19,6 @@ const BUCKET = "tse-csv-uploads";
 const RANGE_BYTES = 64 * 1024; // 64KB por execução — evita 504 do Storage e estouro de CPU
 const STALE_PROCESSING_MS = 2 * 60_000;
 const SUBLOTE = 25;
-const MAX_LINES_PER_RUN = 150;
 
 class TransientStorageError extends Error {
   constructor(message: string) {
@@ -376,7 +375,6 @@ Deno.serve(async (req) => {
               linhasProcessadas += count;
               buffer = [];
             }
-            if (linhasProcessadas >= (arquivo.linhas_processadas ?? 0) + MAX_LINES_PER_RUN) break;
           }
 
           if (buffer.length > 0) {
@@ -388,9 +386,8 @@ Deno.serve(async (req) => {
           }
 
           (rows as any).length = 0;
-          const processedAllRowsInBlock = linhasProcessadas < (arquivo.linhas_processadas ?? 0) + MAX_LINES_PER_RUN;
           const advanceBytes = isFinalRange && lastNl < 0 ? bytes.byteLength : byteLengthLatin1(completePart) + 1;
-          if (processedAllRowsInBlock) cursor += Math.min(bytes.byteLength, advanceBytes);
+          cursor += Math.min(bytes.byteLength, advanceBytes);
         } else {
           cursor += bytes.byteLength;
         }
