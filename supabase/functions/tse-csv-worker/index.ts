@@ -293,30 +293,33 @@ Deno.serve(async (req) => {
 
     let cursor: number = arquivo.byte_cursor;
     let linhasProcessadas: number = arquivo.linhas_processadas ?? 0;
-    let leftover = ""; // resíduo (linha incompleta) entre ranges
     let buffer: any[] = [];
     let totalInseridoSessao = 0;
     const filtro = (arquivo.municipios_filtro as string[] | null) ?? null;
+    const totalBytes = arquivo.tamanho_bytes ?? Number.POSITIVE_INFINITY;
 
-    // 3) Loop de leitura por ranges
-    while (timeLeft() > 5000) {
-      if (cursor >= (arquivo.tamanho_bytes ?? Number.POSITIVE_INFINITY)) break;
-      const end = cursor + RANGE_BYTES - 1;
+    // 3) Processa apenas um slice curto por chamada. O cron/cliente chama de novo e retoma pelo cursor.
+    if (cursor < totalBytes) {
+      const end = Math.min(totalBytes - 1, cursor + RANGE_BYTES - 1);
       const bytes = await downloadRange(admin, partsInfo, cursor, end);
-      if (bytes.byteLength === 0) break;
+      if (bytes.byteLength === 0) {
+        await admin
+          .from("tse_csv_arquivos")
+          .update({ ultima_atividade_em: new Date().toISOString() })
+          .eq("id", arquivo.id);
+      } else {
       // Mantém o cursor no início da linha incompleta e rebaixa essa linha no próximo range.
       // Não concatenamos leftover para não duplicar pedaços de linhas entre chunks.
       const text = decoder.decode(bytes);
 
       // separa em linhas; última pode estar incompleta -> guarda
       const lastNl = text.lastIndexOf("\n");
-      const completePart = lastNl >= 0 ? text.slice(0, lastNl) : "";
-      leftover = lastNl >= 0 ? text.slice(lastNl + 1) : text;
+      const isFinalRange = cursor + bytes.byteLength >= totalBytes;
+      const completePart = lastNl >= 0 ? text.slice(0, lastNl) : isFinalRange ? text : "";
 
       if (completePart.length === 0) {
         cursor += bytes.byteLength;
-        continue;
-      }
+      } else {
 
       // Parseia este pedaço (header + linhas) — anexa header pra ter colunas nomeadas
       const csvBlock = header + "\n" + completePart;
@@ -385,10 +388,11 @@ Deno.serve(async (req) => {
           ultima_atividade_em: new Date().toISOString(),
         })
         .eq("id", arquivo.id);
+      }
     }
 
-    // Flush final dentro do budget
-    if (buffer.length > 0 && timeLeft() > 3000) {
+    // Flush final defensivo
+    if (buffer.length > 0) {
       const ins = await flushBuffer(admin, tabela, buffer, onConflict);
       totalInseridoSessao += ins;
       linhasProcessadas += buffer.length;
