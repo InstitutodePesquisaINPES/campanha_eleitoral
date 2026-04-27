@@ -225,15 +225,15 @@ Deno.serve(async (req) => {
   const admin = createClient(SUPABASE_URL, SERVICE);
 
   const t0 = Date.now();
-  const timeLeft = () => TIME_BUDGET_MS - (Date.now() - t0);
   let arquivoAtual: any = null;
 
   try {
-    // 1) Pega 1 arquivo pendente (FIFO)
+    // 1) Pega 1 arquivo pendente (FIFO). Arquivos "processando" só voltam se ficaram órfãos.
+    const staleIso = new Date(Date.now() - STALE_PROCESSING_MS).toISOString();
     const { data: arquivos, error: e1 } = await admin
       .from("tse_csv_arquivos")
       .select("*")
-      .in("status", ["aguardando", "processando"])
+      .or(`status.eq.aguardando,and(status.eq.processando,ultima_atividade_em.lt.${staleIso})`)
       .order("created_at", { ascending: true })
       .limit(1);
     if (e1) throw e1;
@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, picked: 0, msg: "sem arquivos pendentes" });
     }
 
-    // Marca como processando + incrementa attempts
+    // Marca como processando + incrementa attempts. Cada chamada processa só um slice curto e sai.
     await admin
       .from("tse_csv_arquivos")
       .update({
