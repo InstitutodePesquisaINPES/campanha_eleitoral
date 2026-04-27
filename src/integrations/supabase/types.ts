@@ -6740,6 +6740,16 @@ export type Database = {
         Args: { _ano?: number; _municipio?: string; _uf?: string }
         Returns: Json
       }
+      tse_estatisticas_globais: {
+        Args: never
+        Returns: {
+          candidatos: number
+          eleitorado: number
+          locais: number
+          prestacao_contas: number
+          resultados: number
+        }[]
+      }
       tse_origem_votos_local: {
         Args: {
           _ano: number
