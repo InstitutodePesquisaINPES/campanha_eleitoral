@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import * as tus from "tus-js-client";
 
 export type TseCsvStatus =
   | "aguardando"
@@ -139,8 +138,12 @@ export function useExcluirTSECsvArquivo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (arquivo: TseCsvArquivo) => {
-      // remove do storage primeiro
-      await supabase.storage.from("tse-csv-uploads").remove([arquivo.storage_path]);
+      // remove todas as partes do storage (ou o objeto único legado)
+      const paths =
+        Array.isArray((arquivo as any).parts_paths) && (arquivo as any).parts_paths.length > 0
+          ? ((arquivo as any).parts_paths as string[])
+          : [arquivo.storage_path];
+      await supabase.storage.from("tse-csv-uploads").remove(paths);
       const { error } = await supabase
         .from("tse_csv_arquivos")
         .delete()
@@ -163,6 +166,11 @@ export function useDownloadTSECsv() {
   });
 }
 
+// Tamanho de cada parte (40 MB) — fica abaixo do limite de upload do plano (50 MB).
+// O navegador divide o File em N partes e sobe cada uma com upload() padrão.
+// O worker depois lê as partes em sequência como se fossem um único arquivo.
+const PART_SIZE = 40 * 1024 * 1024;
+
 // Upload + criação do registro de fila. retorna o arquivo criado.
 export async function arquivarCsvParaProcessamento(opts: {
   file: File;
@@ -174,50 +182,57 @@ export async function arquivarCsvParaProcessamento(opts: {
   onProgress?: (pct: number) => void;
 }): Promise<TseCsvArquivo> {
   const { file, tipo, ano, uf } = opts;
-  const { data: sessionData } = await supabase.auth.getSession();
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData?.user?.id;
   if (!userId) throw new Error("Usuário não autenticado");
-  const token = sessionData.session?.access_token;
-  if (!token) throw new Error("Sessão expirada. Entre novamente para enviar arquivos grandes.");
 
   const ts = new Date().toISOString().replace(/[:.]/g, "-");
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storage_path = `${userId}/${ts}_${safeName}`;
+  const baseDir = `${userId}/${ts}_${safeName}`;
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://lryjfthdzmrgudamuqiu.supabase.co";
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+  // Divide o arquivo em partes de PART_SIZE bytes e sobe cada uma como um objeto separado.
+  // Isso evita totalmente o limite de upload do Storage (50 MB padrão) sem depender do plano.
+  const totalParts = Math.max(1, Math.ceil(file.size / PART_SIZE));
+  const partsPaths: string[] = [];
+  const partsSizes: number[] = [];
 
-  await new Promise<void>((resolve, reject) => {
-    const upload = new tus.Upload(file, {
-      endpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
-      retryDelays: [0, 1000, 3000, 5000, 10000, 20000],
-      chunkSize: 6 * 1024 * 1024,
-      removeFingerprintOnSuccess: true,
-      headers: {
-        authorization: `Bearer ${token}`,
-        apikey: anonKey,
-        "x-upsert": "false",
-      },
-      metadata: {
-        bucketName: "tse-csv-uploads",
-        objectName: storage_path,
-        contentType: file.type || "text/csv",
-        cacheControl: "3600",
-      },
-      onError: (error) => reject(error),
-      onProgress: (sent, total) => opts.onProgress?.(Math.min(99, Math.round((sent / total) * 100))),
-      onSuccess: () => {
-        opts.onProgress?.(100);
-        resolve();
-      },
-    });
-    upload.findPreviousUploads().then((previous) => {
-      if (previous.length) upload.resumeFromPreviousUpload(previous[0]);
-      upload.start();
-    }).catch(reject);
-  });
+  for (let i = 0; i < totalParts; i++) {
+    const start = i * PART_SIZE;
+    const end = Math.min(file.size, start + PART_SIZE);
+    const blob = file.slice(start, end);
+    const partName = `${baseDir}/part-${String(i).padStart(5, "0")}.csv`;
 
+    let attempt = 0;
+    // Retry simples por parte
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { error } = await supabase.storage
+        .from("tse-csv-uploads")
+        .upload(partName, blob, {
+          contentType: "text/csv",
+          upsert: true,
+          cacheControl: "3600",
+        });
+      if (!error) break;
+      attempt++;
+      if (attempt >= 3) {
+        throw new Error(
+          `Falha ao enviar parte ${i + 1}/${totalParts}: ${error.message}`,
+        );
+      }
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+
+    partsPaths.push(partName);
+    partsSizes.push(end - start);
+
+    // Progresso por parte
+    const pct = Math.min(99, Math.round(((i + 1) / totalParts) * 100));
+    opts.onProgress?.(pct);
+  }
+  opts.onProgress?.(100);
+
+  // O storage_path "lógico" é a primeira parte (mantém compatibilidade com o restante)
   const { data, error } = await supabase
     .from("tse_csv_arquivos")
     .insert({
@@ -225,9 +240,12 @@ export async function arquivarCsvParaProcessamento(opts: {
       tipo,
       ano,
       uf,
-      storage_path,
+      storage_path: partsPaths[0],
       tabela_destino: TABELA_POR_TIPO[tipo],
       tamanho_bytes: file.size,
+      parts_total: totalParts,
+      parts_paths: partsPaths,
+      parts_sizes: partsSizes,
       municipios_filtro:
         opts.municipios_filtro && opts.municipios_filtro.length > 0
           ? opts.municipios_filtro
