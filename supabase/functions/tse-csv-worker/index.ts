@@ -46,6 +46,28 @@ const ON_CONFLICT: Record<string, string | undefined> = {
   tse_votacao_candidato_perfil: undefined,
 };
 
+// ----- Detecção automática inteligente do tipo via header -----
+function normKey(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+}
+
+function detectTipoFromHeader(headerLine: string): Tipo | null {
+  const headers = headerLine.split(";").map((h) => h.replace(/^"|"$/g, "").trim());
+  const H = new Set(headers.map(normKey));
+  const has = (...ks: string[]) => ks.every((k) => H.has(normKey(k)));
+  const hasAny = (...ks: string[]) => ks.some((k) => H.has(normKey(k)));
+
+  if (has("Nome candidato", "Votos nominais") && hasAny("Cor/raça", "Faixa etária", "Gênero", "Grau de instrução"))
+    return "votacao_candidato_perfil";
+  if (hasAny("Quantidade de eleitores") && hasAny("Cor / Raça", "Faixa etária", "Gênero", "Grau de instrução"))
+    return "eleitorado_perfil";
+  if (hasAny("NM_LOCAL_VOTACAO", "DS_LOCAL_VOTACAO", "NR_LOCAL_VOTACAO")) return "locais";
+  if (hasAny("NM_URNA_CANDIDATO", "NM_CANDIDATO") && hasAny("DS_CARGO", "CD_CARGO")) return "candidatos";
+  if (hasAny("QT_VOTOS") && hasAny("NR_VOTAVEL")) return "resultados";
+  if (hasAny("QT_ELEITORES_PERFIL", "QT_ELEITORES")) return "eleitorado";
+  return null;
+}
+
 // ----- helpers de parse -----
 function n(v: any): number | null {
   if (v === undefined || v === null || v === "" || v === "#NULO#" || v === "#NE#") return null;
@@ -226,26 +248,38 @@ Deno.serve(async (req) => {
       })
       .eq("id", arquivo.id);
 
-    const tipo = arquivo.tipo as Tipo;
-    const tabela = arquivo.tabela_destino as string;
-    const onConflict = ON_CONFLICT[tabela];
+    let tipo = arquivo.tipo as Tipo;
+    let tabela = arquivo.tabela_destino as string;
+    let onConflict = ON_CONFLICT[tabela];
 
     // 2) Garante que temos o header (linha 1) salvo no registro
     let header = arquivo.header_line as string | null;
     if (!header) {
-      // Baixa os primeiros 64KB para extrair header
       const headBytes = await downloadRange(admin, arquivo.storage_path, 0, 64 * 1024 - 1);
       const headText = decoder.decode(headBytes);
       const idxNl = headText.indexOf("\n");
       if (idxNl < 0) throw new Error("CSV sem quebras de linha nos primeiros 64KB");
       header = headText.slice(0, idxNl).replace(/\r$/, "");
-      const headerBytesLen = byteLengthLatin1(header) + 1; // +1 do \n
+      const headerBytesLen = byteLengthLatin1(header) + 1;
       await admin
         .from("tse_csv_arquivos")
         .update({ header_line: header, byte_cursor: Math.max(arquivo.byte_cursor, headerBytesLen) })
         .eq("id", arquivo.id);
       arquivo.header_line = header;
       arquivo.byte_cursor = Math.max(arquivo.byte_cursor, headerBytesLen);
+    }
+
+    // 2.5) AUTO-DETECÇÃO INTELIGENTE: corrige tipo se usuário escolheu errado
+    const tipoDetectado = detectTipoFromHeader(header);
+    if (tipoDetectado && tipoDetectado !== tipo) {
+      console.log(`[auto-detect] tipo informado=${tipo} → corrigido=${tipoDetectado}`);
+      tipo = tipoDetectado;
+      tabela = TABELA_DESTINO[tipo];
+      onConflict = ON_CONFLICT[tabela];
+      await admin
+        .from("tse_csv_arquivos")
+        .update({ tipo, tabela_destino: tabela })
+        .eq("id", arquivo.id);
     }
 
     let cursor: number = arquivo.byte_cursor;
