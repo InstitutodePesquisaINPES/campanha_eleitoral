@@ -303,7 +303,9 @@ Deno.serve(async (req) => {
       const end = cursor + RANGE_BYTES - 1;
       const bytes = await downloadRange(admin, arquivo.storage_path, cursor, end);
       if (bytes.byteLength === 0) break;
-      const text = leftover + decoder.decode(bytes);
+      // Mantém o cursor no início da linha incompleta e rebaixa essa linha no próximo range.
+      // Não concatenamos leftover para não duplicar pedaços de linhas entre chunks.
+      const text = decoder.decode(bytes);
 
       // separa em linhas; última pode estar incompleta -> guarda
       const lastNl = text.lastIndexOf("\n");
