@@ -451,9 +451,14 @@ Deno.serve(async (req) => {
     console.error("worker fatal:", msg);
     if (arquivoAtual?.id) {
       try {
+        const isTransient = e instanceof TransientStorageError || /HTTP 5\d\d|timeout|temporarily|fetch/i.test(msg);
         await createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
           .from("tse_csv_arquivos")
-          .update({ status: "erro", error_msg: msg, ultima_atividade_em: new Date().toISOString() })
+          .update({
+            status: isTransient ? "aguardando" : "erro",
+            error_msg: isTransient ? `Falha temporária no Storage; tentando novamente. ${msg}` : msg,
+            ultima_atividade_em: new Date().toISOString(),
+          })
           .eq("id", arquivoAtual.id);
       } catch (_) {}
     }
