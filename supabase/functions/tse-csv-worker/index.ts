@@ -59,7 +59,7 @@ function detectTipoFromHeader(headerLine: string): Tipo | null {
 
   if (has("Nome candidato", "Votos nominais") && hasAny("Cor/raça", "Faixa etária", "Gênero", "Grau de instrução"))
     return "votacao_candidato_perfil";
-  if (hasAny("Quantidade de eleitores") && hasAny("Cor / Raça", "Faixa etária", "Gênero", "Grau de instrução"))
+  if (hasAny("Quantidade de eleitores", "QT_ELEITORES_PERFIL", "QT_ELEITORES") && hasAny("Cor / Raça", "DS_COR_RACA", "Faixa etária", "DS_FAIXA_ETARIA", "Gênero", "DS_GENERO", "Grau de instrução", "DS_GRAU_ESCOLARIDADE"))
     return "eleitorado_perfil";
   if (hasAny("NM_LOCAL_VOTACAO", "DS_LOCAL_VOTACAO", "NR_LOCAL_VOTACAO")) return "locais";
   if (hasAny("NM_URNA_CANDIDATO", "NM_CANDIDATO") && hasAny("DS_CARGO", "CD_CARGO")) return "candidatos";
@@ -226,6 +226,7 @@ Deno.serve(async (req) => {
 
   const t0 = Date.now();
   const timeLeft = () => TIME_BUDGET_MS - (Date.now() - t0);
+  let arquivoAtual: any = null;
 
   try {
     // 1) Pega 1 arquivo pendente (FIFO)
@@ -238,6 +239,7 @@ Deno.serve(async (req) => {
     if (e1) throw e1;
 
     const arquivo = arquivos?.[0];
+    arquivoAtual = arquivo;
     if (!arquivo) {
       return json({ ok: true, picked: 0, msg: "sem arquivos pendentes" });
     }
@@ -417,6 +419,14 @@ Deno.serve(async (req) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("worker fatal:", msg);
+    if (arquivoAtual?.id) {
+      try {
+        await createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
+          .from("tse_csv_arquivos")
+          .update({ status: "erro", error_msg: msg, ultima_atividade_em: new Date().toISOString() })
+          .eq("id", arquivoAtual.id);
+      } catch (_) {}
+    }
     return json({ ok: false, error: msg }, 200);
   }
 });
