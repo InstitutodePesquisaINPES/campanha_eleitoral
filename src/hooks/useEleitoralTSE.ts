@@ -24,6 +24,7 @@ export function useTSEKpis(uf: string, ano: number) {
       if (error) throw error;
       return data as Record<string, number>;
     },
+    refetchInterval: 10000,
   });
 }
 
@@ -41,6 +42,7 @@ export function useTSEMunicipioResumo(uf: string, ano: number) {
       if (error) throw error;
       return (data ?? []) as any[];
     },
+    refetchInterval: 10000,
   });
 }
 
@@ -98,16 +100,6 @@ export function useTSECandidatos(filters: EleitoralFilters & { busca?: string; e
       if (filters.partido) q = q.eq("partido_sigla", filters.partido);
       if (typeof filters.eleito === "boolean") q = q.eq("eleito", filters.eleito);
       if (filters.busca) q = q.or(`nome_completo.ilike.%${filters.busca}%,nome_urna.ilike.%${filters.busca}%`);
-      const { data, error } = await q;
-      if (error) throw error;
-      if ((data ?? []).length > 0) {
-        const listaTse = (data as any[]).map((item) => ({ ...item, fonte: "tse" }));
-        const ids = new Set(listaTse.map((item) => `${normalizarTexto(item.nome_urna ?? item.nome_completo)}|${item.numero_urna ?? ""}`));
-        const internosUnicos = candidatosInternos.filter((item) => !ids.has(`${normalizarTexto(item.nome_urna ?? item.nome_completo)}|${item.numero_urna ?? ""}`));
-        return [...internosUnicos, ...listaTse];
-      }
-
-      // Fallback: agrega a partir de tse_votacao_candidato_perfil (CSVs do TSE de votação)
       let q2 = supabase
         .from("tse_votacao_candidato_perfil")
         .select("ano,uf,municipio,cod_municipio_tse,cargo,nome_candidato,numero_candidato,partido,situacao_totalizacao,genero,ocupacao,votos_nominais")
@@ -118,8 +110,12 @@ export function useTSECandidatos(filters: EleitoralFilters & { busca?: string; e
       if (filters.cod_municipio_tse) q2 = q2.eq("cod_municipio_tse", filters.cod_municipio_tse);
       if (filters.partido) q2 = q2.eq("partido", filters.partido);
       if (filters.busca) q2 = q2.ilike("nome_candidato", `%${filters.busca}%`);
+      const { data, error } = await q;
+      if (error) throw error;
       const { data: rows2, error: e2 } = await q2;
       if (e2) throw e2;
+
+      const listaCadastro = ((data ?? []) as any[]).map((item) => ({ ...item, fonte: "tse" }));
       const agg = new Map<string, any>();
       for (const r of (rows2 ?? []) as any[]) {
         const key = `${r.ano}|${r.uf}|${r.cod_municipio_tse}|${r.cargo}|${r.numero_candidato}`;
@@ -148,11 +144,27 @@ export function useTSECandidatos(filters: EleitoralFilters & { busca?: string; e
           });
         }
       }
-      const list = Array.from(agg.values()).map((item) => ({ ...item, fonte: "tse" })).sort((a, b) => b.votos_recebidos - a.votos_recebidos);
-      const merged = [...candidatosInternos, ...list];
-      if (typeof filters.eleito === "boolean") return merged.filter((c) => c.eleito === filters.eleito);
-      return merged;
+      const listaPerfil = Array.from(agg.values()).map((item) => ({ ...item, fonte: "tse" }));
+      const porChave = new Map<string, any>();
+      for (const item of listaPerfil) {
+        porChave.set(`${item.ano}|${item.uf}|${item.cod_municipio_tse}|${item.cargo}|${item.numero_urna}`, item);
+      }
+      for (const item of listaCadastro) {
+        const key = `${item.ano}|${item.uf}|${item.cod_municipio_tse}|${item.cargo}|${item.numero_urna}`;
+        const perfil = porChave.get(key);
+        porChave.set(key, {
+          ...(perfil ?? {}),
+          ...item,
+          votos_recebidos: Math.max(Number(item.votos_recebidos ?? 0), Number(perfil?.votos_recebidos ?? 0)),
+          fonte: "tse",
+        });
+      }
+      const idsTse = new Set(Array.from(porChave.values()).map((item) => `${normalizarTexto(item.nome_urna ?? item.nome_completo)}|${item.numero_urna ?? ""}`));
+      const internosUnicos = candidatosInternos.filter((item) => !idsTse.has(`${normalizarTexto(item.nome_urna ?? item.nome_completo)}|${item.numero_urna ?? ""}`));
+      const merged = [...internosUnicos, ...Array.from(porChave.values())].sort((a, b) => Number(b.votos_recebidos ?? 0) - Number(a.votos_recebidos ?? 0));
+      return typeof filters.eleito === "boolean" ? merged.filter((c) => c.eleito === filters.eleito) : merged;
     },
+    refetchInterval: 10000,
   });
 }
 
