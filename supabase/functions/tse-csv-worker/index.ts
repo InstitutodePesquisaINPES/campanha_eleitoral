@@ -16,7 +16,7 @@ const corsHeaders = {
 };
 
 const BUCKET = "tse-csv-uploads";
-const RANGE_BYTES = 64 * 1024; // 64KB por execução — mantém CPU abaixo do limite do Edge Runtime
+const RANGE_BYTES = 256 * 1024; // 256KB por execução — mantém CPU abaixo do limite do Edge Runtime
 const STALE_PROCESSING_MS = 2 * 60_000;
 const SUBLOTE = 50;
 
