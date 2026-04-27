@@ -138,8 +138,12 @@ export function useExcluirTSECsvArquivo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (arquivo: TseCsvArquivo) => {
-      // remove do storage primeiro
-      await supabase.storage.from("tse-csv-uploads").remove([arquivo.storage_path]);
+      // remove todas as partes do storage (ou o objeto único legado)
+      const paths =
+        Array.isArray((arquivo as any).parts_paths) && (arquivo as any).parts_paths.length > 0
+          ? ((arquivo as any).parts_paths as string[])
+          : [arquivo.storage_path];
+      await supabase.storage.from("tse-csv-uploads").remove(paths);
       const { error } = await supabase
         .from("tse_csv_arquivos")
         .delete()
