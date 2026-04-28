@@ -354,15 +354,20 @@ Deno.serve(async (req) => {
               trim: false,
             });
           } catch (err) {
+            // Nunca travar: anota o erro, avança o cursor para pular este bloco e continua
+            console.warn("[parse skip]", (err as Error).message);
+            const advance = lastNl >= 0 ? byteLengthLatin1(completePart) + 1 : bytes.byteLength;
+            cursor += Math.min(bytes.byteLength, advance);
             await admin
               .from("tse_csv_arquivos")
               .update({
-                status: "erro",
-                error_msg: "parse: " + (err as Error).message,
+                status: "aguardando",
+                byte_cursor: cursor,
+                error_msg: "parse pulado: " + (err as Error).message.slice(0, 200),
                 ultima_atividade_em: new Date().toISOString(),
               })
               .eq("id", arquivo.id);
-            return json({ ok: false, error: "parse error", arquivo: arquivo.id });
+            return json({ ok: true, skipped: true, arquivo: arquivo.id, cursor });
           }
 
           for (const row of rows) {
@@ -453,18 +458,22 @@ Deno.serve(async (req) => {
     console.error("worker fatal:", msg);
     if (arquivoAtual?.id) {
       try {
-        const isTransient = e instanceof TransientStorageError || /HTTP 5\d\d|timeout|temporarily|fetch/i.test(msg);
+        // Política: NUNCA travar a fila. Qualquer erro inesperado vira "aguardando" para retomar.
+        // Só marcamos como "erro" se exceder muitas tentativas seguidas (controle por attempts).
+        const attempts = (arquivoAtual.attempts ?? 0);
+        const tooManyFailures = attempts >= 50;
         await createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
           .from("tse_csv_arquivos")
           .update({
-            status: isTransient ? "aguardando" : "erro",
-            error_msg: isTransient ? `Falha temporária no Storage; tentando novamente. ${msg}` : msg,
+            status: tooManyFailures ? "erro" : "aguardando",
+            error_msg: `[${new Date().toISOString()}] ${msg}`.slice(0, 500),
             ultima_atividade_em: new Date().toISOString(),
           })
           .eq("id", arquivoAtual.id);
       } catch (_) {}
     }
-    return json({ ok: false, error: msg }, 200);
+    // Sempre retorna 200 para o cron/cliente seguir disparando próximas execuções
+    return json({ ok: false, error: msg, recovered: true }, 200);
   }
 });
 
@@ -530,13 +539,25 @@ async function downloadOneRange(
   const res = await fetch(data.signedUrl, {
     headers: { Range: `bytes=${start}-${end}` },
   });
-  if (res.status === 429 || res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504) {
+  const ct = res.headers.get("content-type") || "";
+  // Storage às vezes responde HTML em erros de gateway/CDN — tratar como transitório
+  if (ct.includes("text/html") || ct.includes("application/xml")) {
+    let snippet = "";
+    try { snippet = (await res.text()).slice(0, 120); } catch (_) {}
+    throw new TransientStorageError(`storage range ${start}-${end} (${path}): non-binary response (${ct}) ${snippet}`);
+  }
+  if (res.status === 429 || res.status >= 500) {
     throw new TransientStorageError(`storage range ${start}-${end} (${path}): HTTP ${res.status}`);
   }
   if (!res.ok && res.status !== 206 && res.status !== 200) {
-    throw new Error(`storage range ${start}-${end} (${path}): HTTP ${res.status}`);
+    // Em vez de marcar como erro fatal, tratar como transitório para nunca travar a fila
+    throw new TransientStorageError(`storage range ${start}-${end} (${path}): HTTP ${res.status}`);
   }
-  return new Uint8Array(await res.arrayBuffer());
+  try {
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (err) {
+    throw new TransientStorageError(`storage range ${start}-${end} (${path}): body read failed: ${(err as Error).message}`);
+  }
 }
 
 function byteLengthLatin1(s: string): number {
@@ -569,7 +590,9 @@ async function flushBuffer(
         break;
       }
       if (!/deadlock|timeout|connection|temporarily/i.test(msg) || attempt >= 3) {
-        throw new Error("ingest: " + msg);
+        // Nunca travar: registra e pula este sublote
+        console.warn(`[ingest skip ${tabela}] ${msg.slice(0, 200)}`);
+        break;
       }
       attempt++;
       await new Promise((r) => setTimeout(r, 300 * Math.pow(2, attempt)));
