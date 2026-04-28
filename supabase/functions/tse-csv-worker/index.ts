@@ -590,8 +590,26 @@ async function flushBuffer(
         break;
       }
       if (!/deadlock|timeout|connection|temporarily/i.test(msg) || attempt >= 3) {
-        // Nunca travar: registra e pula este sublote
-        console.warn(`[ingest skip ${tabela}] ${msg.slice(0, 200)}`);
+        // Erro de dado no sublote: tenta linha-a-linha para salvar o máximo possível
+        // e pular APENAS as linhas problemáticas, sem perder o lote inteiro.
+        console.warn(`[ingest fallback row-by-row ${tabela}] ${msg.slice(0, 200)}`);
+        for (const row of slice) {
+          try {
+            const qOne = onConflict
+              ? admin.from(tabela).upsert([row], { onConflict, ignoreDuplicates: true })
+              : admin.from(tabela).insert([row]);
+            const { error: e1 } = await qOne;
+            if (!e1) {
+              inserted += 1;
+            } else if (/duplicate key|unique constraint/i.test(e1.message || "")) {
+              inserted += 1; // já existe, conta como ok
+            } else {
+              console.warn(`[ingest skip row ${tabela}] ${(e1.message || "").slice(0, 200)}`);
+            }
+          } catch (rowErr) {
+            console.warn(`[ingest skip row ${tabela}] ${(rowErr as Error).message.slice(0, 200)}`);
+          }
+        }
         break;
       }
       attempt++;
