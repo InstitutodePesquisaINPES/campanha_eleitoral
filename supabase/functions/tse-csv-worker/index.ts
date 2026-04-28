@@ -458,18 +458,22 @@ Deno.serve(async (req) => {
     console.error("worker fatal:", msg);
     if (arquivoAtual?.id) {
       try {
-        const isTransient = e instanceof TransientStorageError || /HTTP 5\d\d|timeout|temporarily|fetch/i.test(msg);
+        // Política: NUNCA travar a fila. Qualquer erro inesperado vira "aguardando" para retomar.
+        // Só marcamos como "erro" se exceder muitas tentativas seguidas (controle por attempts).
+        const attempts = (arquivoAtual.attempts ?? 0);
+        const tooManyFailures = attempts >= 50;
         await createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
           .from("tse_csv_arquivos")
           .update({
-            status: isTransient ? "aguardando" : "erro",
-            error_msg: isTransient ? `Falha temporária no Storage; tentando novamente. ${msg}` : msg,
+            status: tooManyFailures ? "erro" : "aguardando",
+            error_msg: `[${new Date().toISOString()}] ${msg}`.slice(0, 500),
             ultima_atividade_em: new Date().toISOString(),
           })
           .eq("id", arquivoAtual.id);
       } catch (_) {}
     }
-    return json({ ok: false, error: msg }, 200);
+    // Sempre retorna 200 para o cron/cliente seguir disparando próximas execuções
+    return json({ ok: false, error: msg, recovered: true }, 200);
   }
 });
 
