@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,17 +15,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-
-    if (error) {
-      toast({ variant: "destructive", title: "Erro ao entrar", description: error.message });
-    } else {
+    try {
+      const res = await api.post<{ token: string }>('/auth/login', { email, password });
+      api.setToken(res.token);
+      await refreshUser();
       navigate("/");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Erro ao entrar", description: error.message || "Credenciais inválidas." });
+    } finally {
+      setLoading(false);
     }
   };
 

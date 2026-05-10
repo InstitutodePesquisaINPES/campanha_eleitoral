@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,21 +25,16 @@ export default function SignupPage() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
-      },
-    });
-    setLoading(false);
-
-    if (error) {
-      toast({ variant: "destructive", title: "Erro ao cadastrar", description: error.message });
-    } else {
-      toast({ title: "Conta criada!", description: "Verifique seu e-mail para confirmar o cadastro." });
-      navigate("/login");
+    try {
+      const res = await api.post<{ token: string }>('/auth/register', { email, password, fullName });
+      api.setToken(res.token);
+      await refreshUser();
+      toast({ title: "Conta criada!", description: "Bem-vindo ao SIGT." });
+      navigate("/");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Erro ao cadastrar", description: error.message || "Erro desconhecido." });
+    } finally {
+      setLoading(false);
     }
   };
 
