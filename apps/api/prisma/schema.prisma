@@ -230,8 +230,78 @@ model Pessoa {
   creator              User?    @relation("PessoaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
   demandas             Demanda[] @relation("DemandaPessoa")
   eventosParticipados  AgendaParticipante[]
+  contatos             PessoaContato[]
+  enderecos            PessoaEndereco[]
+  papeis               PessoaPapel[]
+  tags                 PessoaTag[]
 
   @@map("pessoas")
+}
+
+model PessoaContato {
+  id        String   @id @default(uuid()) @db.Uuid
+  pessoaId  String   @map("pessoa_id") @db.Uuid
+  tipo      String
+  valor     String
+  principal Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pessoa    Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+
+  @@map("pessoas_contatos")
+}
+
+model PessoaEndereco {
+  id          String   @id @default(uuid()) @db.Uuid
+  pessoaId    String   @map("pessoa_id") @db.Uuid
+  tipo        String?
+  logradouro  String?
+  numero      String?
+  complemento String?
+  cep         String?
+  bairroId    String?  @map("bairro_id") @db.Uuid
+  municipioId String?  @map("municipio_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  pessoa      Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+
+  @@map("pessoas_enderecos")
+}
+
+model PessoaPapel {
+  id        String   @id @default(uuid()) @db.Uuid
+  pessoaId  String   @map("pessoa_id") @db.Uuid
+  papel     String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pessoa    Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+
+  @@map("pessoas_papeis")
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  nome      String   @unique
+  cor       String?
+  categoria String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pessoas   PessoaTag[]
+
+  @@map("tags")
+}
+
+model PessoaTag {
+  pessoaId  String   @map("pessoa_id") @db.Uuid
+  tagId     String   @map("tag_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pessoa    Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([pessoaId, tagId])
+  @@map("pessoas_tags")
 }
 
 // ─── DEMANDAS ──────────────────────────────────────────────
