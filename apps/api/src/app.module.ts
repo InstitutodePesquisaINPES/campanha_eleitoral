@@ -13,6 +13,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ScoreModule } from './modules/score/score.module';
 import { ComunicacaoModule } from './modules/comunicacao/comunicacao.module';
 import { StrategyModule } from './modules/strategy/strategy.module';
+import { TenantModule } from './modules/tenant/tenant.module';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { StrategyModule } from './modules/strategy/strategy.module';
       useFactory: async (configService: ConfigService) => ({
         connection: {
           host: configService.get('REDIS_HOST') || 'localhost',
-          port: configService.get('REDIS_PORT') ? parseInt(configService.get('REDIS_PORT')) : 6379,
+          port: configService.get('REDIS_PORT') ? parseInt(configService.get('REDIS_PORT')!) : 6379,
         },
       }),
       inject: [ConfigService],
@@ -39,6 +40,7 @@ import { StrategyModule } from './modules/strategy/strategy.module';
     ScoreModule,
     ComunicacaoModule,
     StrategyModule,
+    TenantModule,
   ],
 })
 export class AppModule {}

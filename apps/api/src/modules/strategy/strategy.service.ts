@@ -116,9 +116,9 @@ export class StrategyService {
         orcamentoRealizado: orcamentoGasto,
         eventosCampanha: agendasExecutadas,
       };
-      };
     });
   }
+
 
   // --- UPDATE E DELETE ---
   

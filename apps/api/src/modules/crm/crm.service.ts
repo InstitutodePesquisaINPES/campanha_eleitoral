@@ -6,9 +6,10 @@ export class CrmService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ---- PESSOAS ----
-  async findAll(search?: string, nivel?: string, tipo?: string) {
+  async findAll(tenantId: string, search?: string, nivel?: string, tipo?: string) {
     return this.prisma.pessoa.findMany({
       where: {
+        tenantId,
         AND: [
           search ? {
             OR: [
@@ -31,9 +32,9 @@ export class CrmService {
     });
   }
 
-  async findOne(id: string) {
-    const pessoa = await this.prisma.pessoa.findUnique({
-      where: { id },
+  async findOne(id: string, tenantId: string) {
+    const pessoa = await this.prisma.pessoa.findFirst({
+      where: { id, tenantId },
       include: {
         papeis: true,
         contatos: true,
@@ -45,17 +46,19 @@ export class CrmService {
     return pessoa;
   }
 
-  async create(data: any, userId: string) {
+  async create(data: any, userId: string, tenantId: string) {
     return this.prisma.pessoa.create({
-      data: { ...data, createdBy: userId },
+      data: { ...data, createdBy: userId, tenantId },
     });
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: any, tenantId: string) {
+    await this.findOne(id, tenantId); // Asserts ownership
     return this.prisma.pessoa.update({ where: { id }, data });
   }
 
-  async delete(id: string) {
+  async delete(id: string, tenantId: string) {
+    await this.findOne(id, tenantId); // Asserts ownership
     return this.prisma.pessoa.delete({ where: { id } });
   }
 
@@ -99,12 +102,12 @@ export class CrmService {
   }
 
   // ---- TAGS ----
-  async getTags() {
-    return this.prisma.tag.findMany({ orderBy: { nome: 'asc' } });
+  async getTags(tenantId: string) {
+    return this.prisma.tag.findMany({ where: { tenantId }, orderBy: { nome: 'asc' } });
   }
 
-  async createTag(data: any) {
-    return this.prisma.tag.create({ data });
+  async createTag(data: any, tenantId: string) {
+    return this.prisma.tag.create({ data: { ...data, tenantId } });
   }
 
   async addPessoaTag(pessoaId: string, tagId: string) {

@@ -10,25 +10,43 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async register(email: string, password: string, fullName: string) {
+  async register(email: string, password: string, fullName: string, tenantSlug?: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new UnauthorizedException('Email já cadastrado');
     }
 
+    // Cria ou reutiliza o Tenant
+    let tenant = tenantSlug
+      ? await this.prisma.tenant.findUnique({ where: { slug: tenantSlug } })
+      : null;
+
+    if (!tenant) {
+      // Cria um novo Tenant para este usuário (Workspace padrão)
+      const slug = tenantSlug || `ws-${email.split('@')[0]}-${Date.now()}`;
+      tenant = await this.prisma.tenant.create({
+        data: { name: fullName || email, slug },
+      });
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await this.prisma.user.create({
-      data: { email, passwordHash, fullName },
-      select: { id: true, email: true, fullName: true },
+      data: {
+        email,
+        passwordHash,
+        fullName,
+        tenantId: tenant.id,
+      },
+      select: { id: true, email: true, fullName: true, tenantId: true },
     });
 
     // Assign default role
     await this.prisma.userRole.create({
-      data: { userId: user.id, role: 'visualizador' },
+      data: { userId: user.id, role: 'admin', tenantId: tenant.id },
     });
 
-    const token = this.generateToken(user.id, user.email);
-    return { token, user };
+    const token = this.generateToken(user.id, user.email, tenant.id);
+    return { token, user, tenant };
   }
 
   async login(email: string, password: string) {
@@ -46,13 +64,16 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const token = this.generateToken(user.id, user.email);
+    const tenantId = (user as any).tenantId ?? null;
+    const token = this.generateToken(user.id, user.email, tenantId);
+
     return {
       token,
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        tenantId,
         roles: user.roles.map((r) => r.role),
       },
     };
@@ -68,19 +89,20 @@ export class AuthService {
         phone: true,
         cpf: true,
         avatarUrl: true,
+        tenantId: true,
         roles: { select: { role: true } },
-      },
+      } as any,
     });
 
     if (!user) throw new UnauthorizedException('Usuário não encontrado');
 
     return {
       ...user,
-      roles: user.roles.map((r) => r.role),
+      roles: (user as any).roles.map((r: any) => r.role),
     };
   }
 
-  private generateToken(userId: string, email: string): string {
-    return this.jwt.sign({ sub: userId, email });
+  private generateToken(userId: string, email: string, tenantId: string | null): string {
+    return this.jwt.sign({ sub: userId, email, tenantId });
   }
 }

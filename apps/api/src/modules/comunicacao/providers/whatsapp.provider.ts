@@ -9,8 +9,8 @@ export class WhatsappProvider {
   private apiKey: string;
 
   constructor(private configService: ConfigService) {
-    this.apiUrl = this.configService.get<string>('WHATSAPP_API_URL');
-    this.apiKey = this.configService.get<string>('WHATSAPP_API_KEY');
+    this.apiUrl = this.configService.get<string>('WHATSAPP_API_URL') ?? '';
+    this.apiKey = this.configService.get<string>('WHATSAPP_API_KEY') ?? '';
 
     if (this.apiUrl && this.apiKey) {
       this.isEnabled = true;

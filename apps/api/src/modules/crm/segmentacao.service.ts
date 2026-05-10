@@ -24,7 +24,7 @@ export class SegmentacaoService {
       where.score = { gte: filtros.scoreMin };
     }
     if (filtros.scoreMax) {
-      where.score = { ...where.score, lte: filtros.scoreMax } as any;
+      where.score = { ...(where.score as object), lte: filtros.scoreMax } as any;
     }
     if (filtros.liderancaId) {
       where.liderancaId = filtros.liderancaId;

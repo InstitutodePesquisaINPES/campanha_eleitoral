@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { CrmService } from './crm.service';
 import { SegmentacaoService } from './segmentacao.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
+import { CurrentTenant, CurrentUser } from '../../common/decorators/tenant.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('pessoas')
 export class CrmController {
   constructor(
@@ -12,47 +14,48 @@ export class CrmController {
   ) {}
 
   @Post('segmentacao')
-  gerarSegmentacao(@Body() filtros: any) {
+  gerarSegmentacao(@Body() filtros: any, @CurrentTenant() tenantId: string) {
     return this.segmentacaoService.gerarAudiencia(filtros);
   }
 
   @Get()
   findAll(
+    @CurrentTenant() tenantId: string,
     @Query('search') search?: string,
     @Query('nivel') nivel?: string,
     @Query('tipo') tipo?: string,
   ) {
-    return this.crmService.findAll(search, nivel, tipo);
+    return this.crmService.findAll(tenantId, search, nivel, tipo);
   }
 
   @Get('tags')
-  getTags() {
-    return this.crmService.getTags();
+  getTags(@CurrentTenant() tenantId: string) {
+    return this.crmService.getTags(tenantId);
   }
 
   @Post('tags')
-  createTag(@Body() data: any) {
-    return this.crmService.createTag(data);
+  createTag(@Body() data: any, @CurrentTenant() tenantId: string) {
+    return this.crmService.createTag(data, tenantId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.crmService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentTenant() tenantId: string) {
+    return this.crmService.findOne(id, tenantId);
   }
 
   @Post()
-  create(@Body() data: any, @Request() req: any) {
-    return this.crmService.create(data, req.user.sub);
+  create(@Body() data: any, @CurrentUser() userId: string, @CurrentTenant() tenantId: string) {
+    return this.crmService.create(data, userId, tenantId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.crmService.update(id, data);
+  update(@Param('id') id: string, @Body() data: any, @CurrentTenant() tenantId: string) {
+    return this.crmService.update(id, data, tenantId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.crmService.delete(id);
+  remove(@Param('id') id: string, @CurrentTenant() tenantId: string) {
+    return this.crmService.delete(id, tenantId);
   }
 
   // ---- CONTATOS ----
