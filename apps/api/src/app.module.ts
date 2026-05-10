@@ -12,6 +12,7 @@ import { FinanceiroModule } from './modules/financeiro/financeiro.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ScoreModule } from './modules/score/score.module';
 import { ComunicacaoModule } from './modules/comunicacao/comunicacao.module';
+import { StrategyModule } from './modules/strategy/strategy.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ComunicacaoModule } from './modules/comunicacao/comunicacao.module';
     DashboardModule,
     ScoreModule,
     ComunicacaoModule,
+    StrategyModule,
   ],
 })
 export class AppModule {}

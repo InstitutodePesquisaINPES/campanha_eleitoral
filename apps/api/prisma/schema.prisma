@@ -35,6 +35,7 @@ model User {
   demandasAtribuidas Demanda[] @relation("DemandaAtribuidaA")
   eventosCriados Agenda[]     @relation("AgendaCreatedBy")
   eventosAtribuidos Agenda[]  @relation("AgendaResponsavelId")
+  planosAcao      PlanoAcao[] @relation("PlanoAcaoResponsavel")
 
   @@map("users")
 }
@@ -326,6 +327,7 @@ model Demanda {
   resolucaoDescricao String? @map("resolucao_descricao")
   municipioId       String?  @map("municipio_id") @db.Uuid
   bairroId          String?  @map("bairro_id") @db.Uuid
+  eixoId            String?  @map("eixo_id") @db.Uuid
   createdBy         String?  @map("created_by") @db.Uuid
   atribuidoA        String?  @map("atribuido_a") @db.Uuid
   dataAbertura      DateTime @default(now()) @map("data_abertura")
@@ -339,6 +341,7 @@ model Demanda {
   atribuido         User?     @relation("DemandaAtribuidaA", fields: [atribuidoA], references: [id], onDelete: SetNull)
   encaminhamentos   DemandaEncaminhamento[]
   anexos            DemandaAnexo[]
+  eixoEstrategico   EixoEstrategico? @relation("DemandaEixo", fields: [eixoId], references: [id], onDelete: SetNull)
 
   @@map("demandas")
 }
@@ -385,6 +388,7 @@ model Agenda {
   latitude          Float?
   longitude         Float?
   status            String   @default("agendado")
+  planoAcaoId       String?  @map("plano_acao_id") @db.Uuid
   responsavelId     String?  @map("responsavel_id") @db.Uuid
   createdBy         String?  @map("created_by") @db.Uuid
   createdAt         DateTime @default(now()) @map("created_at")
@@ -395,6 +399,7 @@ model Agenda {
   participantes     AgendaParticipante[]
   checkins          AgendaCheckin[]
   followups         AgendaFollowup[]
+  planoAcao         PlanoAcao? @relation("AgendaPlanoAcao", fields: [planoAcaoId], references: [id], onDelete: SetNull)
 
   @@map("agenda")
 }
@@ -471,12 +476,14 @@ model Despesa {
   documentoNumero   String?  @map("documento_numero")
   comprovanteUrl    String?  @map("comprovante_url")
   responsavelId     String?  @map("responsavel_id") @db.Uuid
+  planoAcaoId       String?  @map("plano_acao_id") @db.Uuid
   aprovadorId       String?  @map("aprovador_id") @db.Uuid
   dataPagamento     DateTime? @map("data_pagamento")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   centroCusto       CentroCusto? @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
+  planoAcao         PlanoAcao?   @relation("DespesaPlanoAcao", fields: [planoAcaoId], references: [id], onDelete: SetNull)
 
   @@map("despesas")
 }
@@ -582,4 +589,66 @@ model ComunicacaoLog {
   @@index([pessoaId])
   @@index([campanhaId])
   @@map("comunicacao_logs")
+}
+
+// ─── WAR ROOM (PLANEJAMENTO ESTRATÉGICO) ─────────────────
+
+model CampanhaEstrategia {
+  id                String   @id @default(uuid()) @db.Uuid
+  nome              String
+  cargo             String   // prefeito, vereador, deputado
+  ano               Int
+  metaVotos         Int?     @map("meta_votos")
+  orcamentoGlobal   Float?   @map("orcamento_global")
+  dataEleicao       DateTime? @map("data_eleicao")
+  status            String   @default("planejamento") // planejamento, ativa, concluida
+  createdBy         String?  @map("created_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  eixos             EixoEstrategico[]
+
+  @@map("campanhas_estrategias")
+}
+
+model EixoEstrategico {
+  id                String   @id @default(uuid()) @db.Uuid
+  campanhaId        String   @map("campanha_id") @db.Uuid
+  nome              String   // Saude, Educacao, Infraestrutura
+  descricao         String?
+  cor               String?
+  orcamentoAlocado  Float?   @map("orcamento_alocado")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  campanha          CampanhaEstrategia @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  planosAcao        PlanoAcao[]
+  demandasVinculadas Demanda[] @relation("DemandaEixo")
+
+  @@map("eixos_estrategicos")
+}
+
+model PlanoAcao {
+  id                String   @id @default(uuid()) @db.Uuid
+  eixoId            String   @map("eixo_id") @db.Uuid
+  titulo            String
+  descricao         String?
+  status            String   @default("todo") // todo, doing, done, blocked
+  dataInicio        DateTime? @map("data_inicio")
+  dataFim           DateTime? @map("data_fim")
+  dataConclusao     DateTime? @map("data_conclusao")
+  orcamentoPrevisto Float?   @map("orcamento_previsto")
+  responsavelId     String?  @map("responsavel_id") @db.Uuid
+  dependeDeId       String?  @map("depende_de_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  eixo              EixoEstrategico @relation(fields: [eixoId], references: [id], onDelete: Cascade)
+  responsavel       User?           @relation("PlanoAcaoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+  dependeDe         PlanoAcao?      @relation("DependenciaAcao", fields: [dependeDeId], references: [id], onDelete: SetNull)
+  dependentes       PlanoAcao[]     @relation("DependenciaAcao")
+  agendasVinculadas Agenda[]        @relation("AgendaPlanoAcao")
+  despesasVinculadas Despesa[]      @relation("DespesaPlanoAcao")
+
+  @@map("planos_acao")
 }
