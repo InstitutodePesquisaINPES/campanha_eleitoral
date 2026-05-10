@@ -30,6 +30,11 @@ model User {
 
   roles         UserRole[]
   refreshTokens RefreshToken[]
+  pessoasCriadas Pessoa[]     @relation("PessoaCreatedBy")
+  demandasCriadas Demanda[]   @relation("DemandaCreatedBy")
+  demandasAtribuidas Demanda[] @relation("DemandaAtribuidaA")
+  eventosCriados Agenda[]     @relation("AgendaCreatedBy")
+  eventosAtribuidos Agenda[]  @relation("AgendaResponsavelId")
 
   @@map("users")
 }
@@ -86,6 +91,248 @@ model SystemSetting {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
+}
+
+// ─── TERRITORIAL ─────────────────────────────────────────────
+
+model Estado {
+  id            String      @id @default(uuid()) @db.Uuid
+  nome          String
+  sigla         String      @unique @db.Char(2)
+  geocodigoIbge String?     @unique @map("geocodigo_ibge")
+  latitude      Float?
+  longitude     Float?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  municipios    Municipio[]
+
+  @@map("estados")
+}
+
+model Municipio {
+  id              String    @id @default(uuid()) @db.Uuid
+  estadoId        String    @map("estado_id") @db.Uuid
+  nome            String
+  geocodigoIbge   String?   @unique @map("geocodigo_ibge")
+  populacao       Int?
+  eleitoradoTotal Int?      @map("eleitorado_total")
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  estado          Estado    @relation(fields: [estadoId], references: [id], onDelete: Cascade)
+  bairros         Bairro[]
+  distritos       Distrito[]
+  zonas           ZonaEleitoral[]
+
+  @@map("municipios")
+}
+
+model Distrito {
+  id            String    @id @default(uuid()) @db.Uuid
+  municipioId   String    @map("municipio_id") @db.Uuid
+  nome          String
+  geocodigoIbge String?   @map("geocodigo_ibge")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  municipio     Municipio @relation(fields: [municipioId], references: [id], onDelete: Cascade)
+  bairros       Bairro[]
+
+  @@map("distritos")
+}
+
+model Bairro {
+  id            String    @id @default(uuid()) @db.Uuid
+  municipioId   String    @map("municipio_id") @db.Uuid
+  distritoId    String?   @map("distrito_id") @db.Uuid
+  nome          String
+  classificacao String?   // enum in DB
+  latitude      Float?
+  longitude     Float?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  municipio     Municipio @relation(fields: [municipioId], references: [id], onDelete: Cascade)
+  distrito      Distrito? @relation(fields: [distritoId], references: [id], onDelete: SetNull)
+  comunidades   Comunidade[]
+
+  @@map("bairros")
+}
+
+model Comunidade {
+  id          String    @id @default(uuid()) @db.Uuid
+  bairroId    String    @map("bairro_id") @db.Uuid
+  nome        String
+  microarea   String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  bairro      Bairro    @relation(fields: [bairroId], references: [id], onDelete: Cascade)
+
+  @@map("comunidades")
+}
+
+model ZonaEleitoral {
+  id               String    @id @default(uuid()) @db.Uuid
+  municipioId      String    @map("municipio_id") @db.Uuid
+  numeroZona       Int       @map("numero_zona")
+  tribunalRegional String?   @map("tribunal_regional")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  municipio        Municipio @relation(fields: [municipioId], references: [id], onDelete: Cascade)
+  secoes           SecaoEleitoral[]
+
+  @@map("zonas_eleitorais")
+}
+
+model SecaoEleitoral {
+  id               String    @id @default(uuid()) @db.Uuid
+  zonaId           String    @map("zona_id") @db.Uuid
+  numeroSecao      Int       @map("numero_secao")
+  localVotacao     String?   @map("local_votacao")
+  endereco         String?
+  eleitoresAptos   Int?      @map("eleitores_aptos")
+  latitude         Float?
+  longitude        Float?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  zona             ZonaEleitoral @relation(fields: [zonaId], references: [id], onDelete: Cascade)
+
+  @@map("secoes_eleitorais")
+}
+
+// ─── CRM ───────────────────────────────────────────────────
+
+model Pessoa {
+  id                   String   @id @default(uuid()) @db.Uuid
+  fullName             String   @map("full_name")
+  tipoPessoa           String?  @default("pf") @map("tipo_pessoa")
+  cpf                  String?
+  cnpj                 String?
+  razaoSocial          String?  @map("razao_social")
+  nomeFantasia         String?  @map("nome_fantasia")
+  dataNascimento       String?  @map("data_nascimento")
+  genero               String?
+  escolaridade         String?
+  nivelRelacionamento  String   @default("desconhecido") @map("nivel_relacionamento")
+  observacoes          String?
+  createdBy            String?  @map("created_by") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  creator              User?    @relation("PessoaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  demandas             Demanda[] @relation("DemandaPessoa")
+  eventosParticipados  AgendaParticipante[]
+
+  @@map("pessoas")
+}
+
+// ─── DEMANDAS ──────────────────────────────────────────────
+
+model Demanda {
+  id                String   @id @default(uuid()) @db.Uuid
+  pessoaId          String?  @map("pessoa_id") @db.Uuid
+  titulo            String
+  descricao         String?
+  status            String   @default("aberta")
+  categoria         String?
+  prioridade        String   @default("media")
+  municipioId       String?  @map("municipio_id") @db.Uuid
+  bairroId          String?  @map("bairro_id") @db.Uuid
+  createdBy         String?  @map("created_by") @db.Uuid
+  atribuidoA        String?  @map("atribuido_a") @db.Uuid
+  dataAbertura      DateTime @default(now()) @map("data_abertura")
+  dataVencimento    DateTime? @map("data_vencimento")
+  dataResolucao     DateTime? @map("data_resolucao")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  pessoa            Pessoa?   @relation("DemandaPessoa", fields: [pessoaId], references: [id], onDelete: SetNull)
+  creator           User?     @relation("DemandaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  atribuido         User?     @relation("DemandaAtribuidaA", fields: [atribuidoA], references: [id], onDelete: SetNull)
+
+  @@map("demandas")
+}
+
+// ─── AGENDA ────────────────────────────────────────────────
+
+model Agenda {
+  id                String   @id @default(uuid()) @db.Uuid
+  titulo            String
+  descricao         String?
+  tipo              String
+  dataInicio        DateTime @map("data_inicio")
+  dataFim           DateTime? @map("data_fim")
+  diaInteiro        Boolean  @default(false) @map("dia_inteiro")
+  local             String?
+  municipioId       String?  @map("municipio_id") @db.Uuid
+  bairroId          String?  @map("bairro_id") @db.Uuid
+  latitude          Float?
+  longitude         Float?
+  status            String   @default("agendado")
+  responsavelId     String?  @map("responsavel_id") @db.Uuid
+  createdBy         String?  @map("created_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  creator           User?    @relation("AgendaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  responsavel       User?    @relation("AgendaResponsavelId", fields: [responsavelId], references: [id], onDelete: SetNull)
+  participantes     AgendaParticipante[]
+
+  @@map("agenda")
+}
+
+model AgendaParticipante {
+  id          String   @id @default(uuid()) @db.Uuid
+  agendaId    String   @map("agenda_id") @db.Uuid
+  pessoaId    String   @map("pessoa_id") @db.Uuid
+  papel       String?
+  confirmado  Boolean  @default(false)
+  compareceu  Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  agenda      Agenda   @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  pessoa      Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+
+  @@map("agenda_participantes")
+}
+
+// ─── FINANCEIRO ────────────────────────────────────────────
+
+model Despesa {
+  id                String   @id @default(uuid()) @db.Uuid
+  descricao         String
+  valor             Float
+  dataDespesa       DateTime @map("data_despesa")
+  categoria         String
+  status            String   @default("pendente")
+  fornecedorId      String?  @map("fornecedor_id") @db.Uuid
+  comprovanteUrl    String?  @map("comprovante_url")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("despesas")
+}
+
+model Receita {
+  id                String   @id @default(uuid()) @db.Uuid
+  descricao         String
+  valor             Float
+  dataReceita       DateTime @map("data_receita")
+  tipo              String
+  doadorId          String?  @map("doador_id") @db.Uuid
+  comprovanteUrl    String?  @map("comprovante_url")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("receitas")
 }
 
 // ─── TSE IMPORT CONTROL ─────────────────────────────────────
