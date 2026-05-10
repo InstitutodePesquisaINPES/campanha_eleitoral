@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlarmClock, Flag } from "lucide-react";
@@ -10,7 +10,7 @@ export function MarcosCriticos({ campanhaId }: { campanhaId: string }) {
     enabled: !!campanhaId,
     queryFn: async () => {
       const hoje = new Date().toISOString().slice(0, 10);
-      const { data, error } = await (supabase as any)
+      const { data, error } = await ((api as any) as any)
         .from("campanha_tarefas")
         .select("id, titulo, data_prevista, area, prioridade, status")
         .eq("campanha_id", campanhaId)

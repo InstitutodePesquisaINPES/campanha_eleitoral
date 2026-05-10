@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import {
   LayoutDashboard,
   MapPin,
@@ -30,10 +30,11 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useIsAdmin } from "@/hooks/useUserRoles";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 import {
   Sidebar,
   SidebarContent,
@@ -144,25 +145,11 @@ export function AppSidebar() {
   const isAdmin = useIsAdmin();
 
   // Buscar configurações de Branding em tempo real
-  const { data: settings = [] } = useQuery({
-    queryKey: ["system-settings"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("system_settings").select("*");
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const { data: settings = {} } = useSystemSettings();
 
-  const getSetting = (key: string, defaultValue: string = "") => {
-    const s = settings.find((s: any) => s.key === key);
-    if (!s) return defaultValue;
-    const val = s.value;
-    return typeof val === "string" ? val.replace(/^"|"$/g, "") : String(val);
-  };
-
-  const brandName = getSetting("brand_name", "KIRIBAMBA");
-  const brandNumber = getSetting("brand_number", "70");
-  const brandSubtitle = getSetting("brand_subtitle", "Avante · Dep. Federal");
+  const brandName = settings["brand_name"] || "KIRIBAMBA";
+  const brandNumber = settings["brand_number"] || "70";
+  const brandSubtitle = settings["brand_subtitle"] || "Avante · Dep. Federal";
 
   const { mode, setMode, effectiveMode } = useTheme();
 

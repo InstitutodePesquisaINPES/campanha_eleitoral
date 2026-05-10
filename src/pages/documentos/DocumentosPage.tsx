@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,31 +27,38 @@ export default function DocumentosPage() {
   const { data: docs = [], isLoading } = useQuery({
     queryKey: ["documentos"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pessoas_anexos")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return data ?? [];
+      const data = await api.get<any[]>('/documentos');
+      return (data || []).map(d => ({
+        ...d,
+        arquivo_url: `${import.meta.env.VITE_API_URL}${d.arquivoUrl}`,
+        tipo_documento: d.tipoDocumento,
+        created_at: d.createdAt,
+      }));
     },
   });
 
   const upload = useMutation({
     mutationFn: async () => {
       if (!form.file) throw new Error("Selecione um arquivo");
-      const ext = form.file.name.split(".").pop();
-      const path = `documentos/${user?.id}/${Date.now()}-${form.titulo.replace(/[^a-z0-9]/gi, "_")}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("documentos").upload(path, form.file);
-      if (upErr) throw upErr;
-      const { data: { publicUrl } } = supabase.storage.from("documentos").getPublicUrl(path);
-      const { error } = await supabase.from("pessoas_anexos").insert({
-        pessoa_id: user?.id || "",
-        arquivo_url: publicUrl,
-        tipo_documento: form.tipo,
-        descricao: `${form.titulo}${form.descricao ? " · " + form.descricao : ""}`,
+      const formData = new FormData();
+      formData.append('file', form.file);
+      formData.append('titulo', form.titulo);
+      formData.append('tipo', form.tipo);
+      formData.append('descricao', form.descricao);
+      
+      // We must use standard fetch or Axios to send FormData properly
+      // If apiClient doesn't handle FormData natively, we can use fetch:
+      const token = localStorage.getItem('token');
+      const tenantId = localStorage.getItem('tenantId');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/documentos/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          ...(tenantId ? { 'x-tenant-id': tenantId } : {})
+        },
+        body: formData,
       });
-      if (error) throw error;
+      if (!res.ok) throw new Error("Falha no upload");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["documentos"] });
@@ -64,8 +71,7 @@ export default function DocumentosPage() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("pessoas_anexos").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/documentos/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["documentos"] });

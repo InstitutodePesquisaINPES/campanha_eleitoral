@@ -10,7 +10,12 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async register(email: string, password: string, fullName: string, tenantSlug?: string) {
+  async register(
+    email: string,
+    password: string,
+    fullName: string,
+    tenantSlug?: string,
+  ) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new UnauthorizedException('Email já cadastrado');
@@ -64,7 +69,7 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const tenantId = (user as any).tenantId ?? null;
+    const tenantId = user.tenantId;
     const token = this.generateToken(user.id, user.email, tenantId);
 
     return {
@@ -91,18 +96,22 @@ export class AuthService {
         avatarUrl: true,
         tenantId: true,
         roles: { select: { role: true } },
-      } as any,
+      },
     });
 
     if (!user) throw new UnauthorizedException('Usuário não encontrado');
 
     return {
       ...user,
-      roles: (user as any).roles.map((r: any) => r.role),
+      roles: user.roles.map((r) => r.role),
     };
   }
 
-  private generateToken(userId: string, email: string, tenantId: string | null): string {
+  private generateToken(
+    userId: string,
+    email: string,
+    tenantId: string | null,
+  ): string {
     return this.jwt.sign({ sub: userId, email, tenantId });
   }
 }

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
 @Injectable()
@@ -41,6 +45,30 @@ export class TenantService {
     return this.prisma.tenant.update({
       where: { id },
       data: { active: false },
+    });
+  }
+
+  // --- CONFIGURAÇÕES DO TENANT (SaaS Visual) ---
+
+  async getSettings(tenantId: string) {
+    let settings = await this.prisma.tenantSettings.findUnique({
+      where: { tenantId },
+    });
+
+    if (!settings) {
+      settings = await this.prisma.tenantSettings.create({
+        data: { tenantId },
+      });
+    }
+
+    return settings;
+  }
+
+  async updateSettings(tenantId: string, data: any) {
+    return this.prisma.tenantSettings.upsert({
+      where: { tenantId },
+      create: { ...data, tenantId },
+      update: data,
     });
   }
 }

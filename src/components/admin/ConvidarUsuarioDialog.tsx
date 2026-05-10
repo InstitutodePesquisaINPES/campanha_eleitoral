@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, UserPlus } from "lucide-react";
@@ -21,7 +21,7 @@ export function ConvidarUsuarioDialog() {
   const submit = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: form });
+      const { data, error } = await (api as any).functions.invoke("admin-create-user", { body: form });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       toast.success("Usuário criado!");

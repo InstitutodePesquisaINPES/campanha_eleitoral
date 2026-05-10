@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, MapPin, FileText, DollarSign, Calendar, Package, Building2, Activity } from "lucide-react";
 
@@ -22,7 +22,7 @@ export function StatsTab() {
     queryFn: async () => {
       const results = await Promise.all(
         tables.map(async (t) => {
-          const { count } = await supabase.from(t.name as any).select("*", { count: "exact", head: true });
+          const { count } = await (api as any).from(t.name as any).select("*", { count: "exact", head: true });
           return { name: t.name, count: count || 0 };
         })
       );

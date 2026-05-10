@@ -24,6 +24,24 @@ model Tenant {
   pessoas                Pessoa[]
   pessoaContatos         PessoaContato[]
   pessoaEnderecos        PessoaEndereco[]
+  documentos             Documento[]
+  notificacoes           Notificacao[]
+  reunioes               Reuniao[]
+  reuniaoDeliberacoes    ReuniaoDeliberacao[]
+  roteiros               RoteiroVisita[]
+  roteiroParadas         RoteiroParada[]
+  pesquisas              Pesquisa[]
+  pesquisaResultados     PesquisaResultado[]
+  captacaoDoadores       CaptacaoDoador[]
+  materiais              Material[]
+  estoques               Estoque[]
+  movimentacaoEstoques   MovimentacaoEstoque[]
+  contratos              Contrato[]
+  contratoAprovacoes     ContratoAprovacao[]
+  municipiosEstrategicos MunicipioEstrategico[]
+  bairrosEstrategicos    BairroEstrategico[]
+  liderancasLocais       LiderancaLocal[]
+  vereadoresHistoricos   VereadorHistorico[]
   pessoaPapels           PessoaPapel[]
   tags                   Tag[]
   pessoaTags             PessoaTag[]
@@ -46,6 +64,18 @@ model Tenant {
   eixoEstrategicos       EixoEstrategico[]
   planoAcaos             PlanoAcao[]
   campanhaParcerias      CampanhaParceria[]
+  comunicacaoPautas      ComunicacaoPauta[]
+  comunicacaoPecas       ComunicacaoPeca[]
+  comunicacaoMencaos     ComunicacaoMencao[]
+  campanhas              Campanha[]
+  aiProvedors            AiProvedor[]
+  aiModelos              AiModelo[]
+  aiCopilots             AiCopilot[]
+  aiUsoLogs              AiUsoLog[]
+  municipios             Municipio[]
+  mapaCenarios           MapaCenario[]
+  mapaSetors             MapaSetor[]
+  tenantSettings         TenantSettings?
 
   @@map("tenants")
 }
@@ -74,12 +104,15 @@ model User {
   refreshTokens      RefreshToken[]
   pessoasCriadas     Pessoa[]       @relation("PessoaCreatedBy")
   demandasCriadas    Demanda[]      @relation("DemandaCreatedBy")
+  notificacoes       Notificacao[]
   demandasAtribuidas Demanda[]      @relation("DemandaAtribuidaA")
   eventosCriados     Agenda[]       @relation("AgendaCreatedBy")
   eventosAtribuidos  Agenda[]       @relation("AgendaResponsavelId")
   planosAcao         PlanoAcao[]    @relation("PlanoAcaoResponsavel")
   tenantId           String         @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
   tenant             Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  profile            Profile?
+  aiUsoLogs          AiUsoLog[]
 
   @@map("users")
 }
@@ -134,7 +167,7 @@ model AuditLog {
 
 model SystemSetting {
   id          String   @id @default(uuid()) @db.Uuid
-  key         String   @unique
+  key         String
   value       Json     @default("{}")
   description String?
   updatedBy   String?  @map("updated_by") @db.Uuid
@@ -143,6 +176,7 @@ model SystemSetting {
   tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, key])
   @@map("system_settings")
 }
 
@@ -164,21 +198,33 @@ model Estado {
 }
 
 model Municipio {
-  id              String   @id @default(uuid()) @db.Uuid
-  estadoId        String   @map("estado_id") @db.Uuid
-  nome            String
-  geocodigoIbge   String?  @unique @map("geocodigo_ibge")
-  populacao       Int?
-  eleitoradoTotal Int?     @map("eleitorado_total")
-  latitude        Float?
-  longitude       Float?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                       String   @id @default(uuid()) @db.Uuid
+  estadoId                 String   @map("estado_id") @db.Uuid
+  nome                     String
+  geocodigoIbge            String?  @unique @map("geocodigo_ibge")
+  populacao                Int?
+  populacao2022            Int?     @map("populacao_2022")
+  eleitoradoTotal          Int?     @map("eleitorado_total")
+  latitude                 Float?
+  longitude                Float?
+  classificacaoEstrategica String?  @map("classificacao_estrategica")
+  prioridadeCampanha       Int?     @map("prioridade_campanha")
+  notasEstrategicas        String?  @map("notas_estrategicas")
+  tenantId                 String?  @map("tenant_id") @db.Uuid // Optional since it might be global
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
-  estado    Estado          @relation(fields: [estadoId], references: [id], onDelete: Cascade)
-  bairros   Bairro[]
-  distritos Distrito[]
-  zonas     ZonaEleitoral[]
+  estado                 Estado                 @relation(fields: [estadoId], references: [id], onDelete: Cascade)
+  tenant                 Tenant?                @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  bairros                Bairro[]
+  distritos              Distrito[]
+  zonas                  ZonaEleitoral[]
+  roteiros               RoteiroVisita[]
+  enderecos              PessoaEndereco[]
+  estoques               Estoque[]
+  municipiosEstrategicos MunicipioEstrategico[]
+  liderancasLocais       LiderancaLocal[]
+  vereadoresHistoricos   VereadorHistorico[]
 
   @@map("municipios")
 }
@@ -198,19 +244,26 @@ model Distrito {
 }
 
 model Bairro {
-  id            String   @id @default(uuid()) @db.Uuid
-  municipioId   String   @map("municipio_id") @db.Uuid
-  distritoId    String?  @map("distrito_id") @db.Uuid
-  nome          String
-  classificacao String? // enum in DB
-  latitude      Float?
-  longitude     Float?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(uuid()) @db.Uuid
+  municipioId          String   @map("municipio_id") @db.Uuid
+  distritoId           String?  @map("distrito_id") @db.Uuid
+  nome                 String
+  classificacao        String? // enum in DB
+  zonaTipo             String?  @map("zona_tipo")
+  zonaEstrategica      String?  @map("zona_estrategica")
+  perfilSocioeconomico String?  @map("perfil_socioeconomico")
+  populacaoEstimada    Int?     @map("populacao_estimada")
+  latitude             Float?
+  longitude            Float?
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  municipio   Municipio    @relation(fields: [municipioId], references: [id], onDelete: Cascade)
-  distrito    Distrito?    @relation(fields: [distritoId], references: [id], onDelete: SetNull)
-  comunidades Comunidade[]
+  municipio           Municipio           @relation(fields: [municipioId], references: [id], onDelete: Cascade)
+  distrito            Distrito?           @relation(fields: [distritoId], references: [id], onDelete: SetNull)
+  comunidades         Comunidade[]
+  enderecos           PessoaEndereco[]
+  bairrosEstrategicos BairroEstrategico[]
+  liderancasLocais    LiderancaLocal[]
 
   @@map("bairros")
 }
@@ -295,6 +348,7 @@ model Pessoa {
   mensagensComunicacao ComunicacaoLog[]
   tenantId             String               @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
   tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  liderancasLocais     LiderancaLocal[]
 
   @@map("pessoas")
 }
@@ -326,7 +380,10 @@ model PessoaEndereco {
   municipioId String?  @map("municipio_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
-  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  pessoa    Pessoa     @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  bairro    Bairro?    @relation(fields: [bairroId], references: [id], onDelete: SetNull)
+  municipio Municipio? @relation(fields: [municipioId], references: [id], onDelete: SetNull)
+
   tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -777,3 +834,665 @@ model CampanhaParceria {
 
   @@map("campanhas_parcerias")
 }
+
+// ─── WAR ROOM (COMUNICAÇÃO) ──────────────────────────────────
+
+model ComunicacaoPauta {
+  id            String    @id @default(uuid()) @db.Uuid
+  campanhaId    String?   @map("campanha_id") @db.Uuid
+  titulo        String
+  descricao     String?
+  status        String    @default("planejada")
+  dataPrevista  DateTime? @map("data_prevista")
+  responsavelId String?   @map("responsavel_id") @db.Uuid
+  prioridade    String    @default("media")
+  tags          String[]
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  tenantId      String    @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pecas  ComunicacaoPeca[]
+
+  @@map("comunicacao_pautas")
+}
+
+model ComunicacaoPeca {
+  id                   String    @id @default(uuid()) @db.Uuid
+  pautaId              String?   @map("pauta_id") @db.Uuid
+  campanhaId           String?   @map("campanha_id") @db.Uuid
+  formato              String
+  titulo               String
+  conteudo             String?
+  status               String    @default("rascunho")
+  dataPublicacao       DateTime? @map("data_publicacao")
+  plataformas          String[]
+  urlArquivo           String?   @map("url_arquivo")
+  responsavelId        String?   @map("responsavel_id") @db.Uuid
+  aprovadoPor          String?   @map("aprovado_por") @db.Uuid
+  aprovadoEm           DateTime? @map("aprovado_em")
+  observacoesJuridicas String?   @map("observacoes_juridicas")
+  versao               Int       @default(1)
+  createdBy            String    @map("created_by") @db.Uuid
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  tenantId             String    @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pauta  ComunicacaoPauta? @relation(fields: [pautaId], references: [id], onDelete: SetNull)
+
+  @@map("comunicacao_pecas")
+}
+
+model ComunicacaoMencao {
+  id              String    @id @default(uuid()) @db.Uuid
+  campanhaId      String?   @map("campanha_id") @db.Uuid
+  canal           String
+  autor           String?
+  url             String?
+  conteudo        String
+  sentimento      String    @default("neutro")
+  status          String    @default("novo")
+  alcanceEstimado Int?      @map("alcance_estimado")
+  resposta        String?
+  respondidoPor   String?   @map("respondido_por") @db.Uuid
+  respondidoEm    DateTime? @map("respondido_em")
+  dataMencao      DateTime  @map("data_mencao")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  tenantId        String    @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("comunicacao_mencoes")
+}
+
+// ─── CAMPANHAS (CORE) ──────────────────────────────────────
+
+model Campanha {
+  id                String    @id @default(uuid()) @db.Uuid
+  nome              String
+  cargo             String
+  partidoSigla      String?   @map("partido_sigla")
+  numeroUrna        String?   @map("numero_urna")
+  coligacao         String?
+  estadoId          String?   @map("estado_id") @db.Uuid
+  municipioId       String?   @map("municipio_id") @db.Uuid
+  municipiosFocoIds String[]  @map("municipios_foco_ids")
+  dataEleicao       DateTime? @map("data_eleicao")
+  dataInicioPlano   DateTime? @map("data_inicio_plano")
+  metaVotos         Int?      @map("meta_votos")
+  orcamentoTotal    Float?    @map("orcamento_total")
+  observacoes       String?
+  ativa             Boolean   @default(true)
+  candidatoPessoaId String?   @map("candidato_pessoa_id") @db.Uuid
+
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tarefas      CampanhaTarefa[]
+  fases        CampanhaFase[]
+  metas        CampanhaMeta[]
+  semanas      CampanhaSemana[]
+  mapaCenarios MapaCenario[]
+  mapaSetors   MapaSetor[]
+
+  @@map("campanhas")
+}
+
+model CampanhaFase {
+  id         String    @id @default(uuid()) @db.Uuid
+  campanhaId String    @map("campanha_id") @db.Uuid
+  nome       String
+  ordem      Int
+  cor        String?
+  dataInicio DateTime? @map("data_inicio")
+  dataFim    DateTime? @map("data_fim")
+
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  campanha Campanha         @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  tarefas  CampanhaTarefa[]
+
+  @@map("campanha_fases")
+}
+
+model CampanhaTarefa {
+  id            String    @id @default(uuid()) @db.Uuid
+  campanhaId    String    @map("campanha_id") @db.Uuid
+  faseId        String?   @map("fase_id") @db.Uuid
+  oQueE         String?   @map("o_que_e")
+  oQueFaz       String?   @map("o_que_faz")
+  descricao     String?
+  entregaveis   String?
+  prioridade    String    @default("media")
+  area          String    @default("geral")
+  dia           Int       @default(0)
+  ordem         Int       @default(0)
+  isMarco       Boolean   @default(false) @map("is_marco")
+  dataPrevista  DateTime? @map("data_prevista")
+  dataConclusao DateTime? @map("data_conclusao")
+
+  faseLegal              String? @map("fase_legal")
+  permitidoAntesRegistro Boolean @default(true) @map("permitido_antes_registro")
+  respaldoLegal          String? @map("respaldo_legal")
+  observacoes            String?
+
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  campanha   Campanha            @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  fase       CampanhaFase?       @relation(fields: [faseId], references: [id], onDelete: SetNull)
+  subtarefas CampanhaSubtarefa[]
+
+  @@map("campanha_tarefas")
+}
+
+model CampanhaSubtarefa {
+  id            String  @id @default(uuid()) @db.Uuid
+  tarefaId      String  @map("tarefa_id") @db.Uuid
+  titulo        String
+  status        String  @default("pendente")
+  responsavelId String? @map("responsavel_id") @db.Uuid
+
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tarefa CampanhaTarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+
+  @@map("campanha_subtarefas")
+}
+
+model CampanhaMeta {
+  id         String    @id @default(uuid()) @db.Uuid
+  campanhaId String    @map("campanha_id") @db.Uuid
+  nome       String
+  indicador  String
+  valorAlvo  Float     @map("valor_alvo")
+  valorAtual Float     @default(0) @map("valor_atual")
+  unidade    String?
+  dataPrazo  DateTime? @map("data_prazo")
+
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  campanha       Campanha                @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  metasMunicipio CampanhaMetaMunicipio[]
+
+  @@map("campanha_metas")
+}
+
+model CampanhaMetaMunicipio {
+  id          String @id @default(uuid()) @db.Uuid
+  metaId      String @map("meta_id") @db.Uuid
+  municipioId String @map("municipio_id") @db.Uuid
+  valorAlvo   Float  @map("valor_alvo")
+  valorAtual  Float  @default(0) @map("valor_atual")
+
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  meta CampanhaMeta @relation(fields: [metaId], references: [id], onDelete: Cascade)
+
+  @@map("campanha_metas_municipio")
+}
+
+model CampanhaSemana {
+  id         String   @id @default(uuid()) @db.Uuid
+  campanhaId String   @map("campanha_id") @db.Uuid
+  numero     Int
+  dataInicio DateTime @map("data_inicio")
+  dataFim    DateTime @map("data_fim")
+  foco       String?
+
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  campanha Campanha @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+
+  @@map("campanha_semanas")
+}
+
+// ─── PROFILE (Usuários) ──────────────────────────────────────
+model Profile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  fullName  String   @map("full_name")
+  phone     String?
+  cpf       String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+// ─── AI (Inteligência Artificial) ──────────────────────────────────────────
+
+model AiProvedor {
+  id        String   @id @default(uuid()) @db.Uuid
+  nome      String
+  tipo      String
+  status    String   @default("ativo")
+  apiKey    String?  @map("api_key")
+  baseUrl   String?  @map("base_url")
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  modelos  AiModelo[]
+  copilots AiCopilot[]
+  logs     AiUsoLog[]
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("ai_provedores")
+}
+
+model AiModelo {
+  id          String   @id @default(uuid()) @db.Uuid
+  provedorId  String   @map("provedor_id") @db.Uuid
+  nome        String
+  modeloId    String   @map("modelo_id")
+  status      String   @default("ativo")
+  capacidades Json?
+  custoInput  Float?   @map("custo_input")
+  custoOutput Float?   @map("custo_output")
+  tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  provedor AiProvedor  @relation(fields: [provedorId], references: [id], onDelete: Cascade)
+  copilots AiCopilot[]
+  logs     AiUsoLog[]
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("ai_modelos")
+}
+
+model AiCopilot {
+  id            String   @id @default(uuid()) @db.Uuid
+  nome          String
+  descricao     String?
+  systemPrompt  String   @map("system_prompt")
+  modeloId      String   @map("modelo_id") @db.Uuid
+  provedorId    String   @map("provedor_id") @db.Uuid
+  status        String   @default("ativo")
+  parametros    Json?
+  funcoesAcesso String[] @map("funcoes_acesso")
+  tenantId      String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  modelo   AiModelo   @relation(fields: [modeloId], references: [id], onDelete: Cascade)
+  provedor AiProvedor @relation(fields: [provedorId], references: [id], onDelete: Cascade)
+  logs     AiUsoLog[]
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("ai_copilots")
+}
+
+model AiUsoLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  copilotId     String?  @map("copilot_id") @db.Uuid
+  modeloId      String?  @map("modelo_id") @db.Uuid
+  provedorId    String?  @map("provedor_id") @db.Uuid
+  userId        String?  @map("user_id") @db.Uuid
+  acao          String
+  tokensInput   Int      @default(0) @map("tokens_input")
+  tokensOutput  Int      @default(0) @map("tokens_output")
+  custoEstimado Float    @default(0) @map("custo_estimado")
+  latenciaMs    Int?     @map("latencia_ms")
+  metadata      Json?
+  tenantId      String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  copilot  AiCopilot?  @relation(fields: [copilotId], references: [id], onDelete: SetNull)
+  modelo   AiModelo?   @relation(fields: [modeloId], references: [id], onDelete: SetNull)
+  provedor AiProvedor? @relation(fields: [provedorId], references: [id], onDelete: SetNull)
+  user     User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("ai_uso_log")
+}
+
+// ─── GEOPROCESSAMENTO E ESTRATÉGIA (Onda 3) ─────────────────────────────────
+
+model MapaCenario {
+  id         String   @id @default(uuid()) @db.Uuid
+  nome       String
+  descricao  String?
+  tenantId   String   @map("tenant_id") @db.Uuid
+  campanhaId String?  @map("campanha_id") @db.Uuid
+  createdBy  String?  @map("created_by") @db.Uuid
+  geoJson    Json?    @map("geojson")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campanha Campanha? @relation(fields: [campanhaId], references: [id], onDelete: SetNull)
+
+  @@map("mapa_cenarios")
+}
+
+model MapaSetor {
+  id         String   @id @default(uuid()) @db.Uuid
+  nome       String
+  tipo       String // setor, zona, rota
+  cor        String?
+  tenantId   String   @map("tenant_id") @db.Uuid
+  campanhaId String?  @map("campanha_id") @db.Uuid
+  createdBy  String?  @map("created_by") @db.Uuid
+  geoJson    Json?    @map("geojson")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campanha Campanha? @relation(fields: [campanhaId], references: [id], onDelete: SetNull)
+
+  @@map("mapa_setores")
+}
+
+// ─── CONFIGURAÇÕES DE TENANT / SaaS (Onda 4) ────────────────────────────────
+
+model TenantSettings {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @unique @map("tenant_id") @db.Uuid
+  primaryColor String?  @map("primary_color")
+  logoUrl      String?  @map("logo_url")
+  themeConfig  Json?    @map("theme_config")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_settings")
+}
+
+model Documento {
+  id            String   @id @default(uuid())
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pessoaId      String
+  arquivoUrl    String
+  tipoDocumento String?
+  descricao     String?
+  tamanho       Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Notificacao {
+  id           String    @id @default(uuid())
+  tenantId     String    @db.Uuid
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId       String    @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tipo         String
+  titulo       String
+  mensagem     String?
+  link         String?
+  entidadeTipo String?
+  entidadeId   String?
+  lida         Boolean   @default(false)
+  lidaEm       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Reuniao {
+  id          String   @id @default(uuid())
+  tenantId    String   @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  titulo      String
+  dataReuniao DateTime
+  pauta       String?
+  local       String?
+  tipo        String?
+  campanhaId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deliberacoes ReuniaoDeliberacao[]
+}
+
+model ReuniaoDeliberacao {
+  id            String    @id @default(uuid())
+  tenantId      String    @db.Uuid
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reuniaoId     String
+  reuniao       Reuniao   @relation(fields: [reuniaoId], references: [id], onDelete: Cascade)
+  descricao     String
+  prazo         DateTime?
+  responsavelId String?
+  status        String    @default("pendente")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model RoteiroVisita {
+  id          String     @id @default(uuid())
+  tenantId    String     @db.Uuid
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nome        String
+  data        DateTime
+  municipioId String?    @db.Uuid
+  municipio   Municipio? @relation(fields: [municipioId], references: [id])
+  observacoes String?
+  status      String     @default("pendente")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  paradas RoteiroParada[]
+}
+
+model RoteiroParada {
+  id        String        @id @default(uuid())
+  tenantId  String        @db.Uuid
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roteiroId String
+  roteiro   RoteiroVisita @relation(fields: [roteiroId], references: [id], onDelete: Cascade)
+  descricao String?
+  concluido Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model Pesquisa {
+  id             String    @id @default(uuid())
+  tenantId       String    @db.Uuid
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  titulo         String
+  instituto      String?
+  dataDivulgacao DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  resultados PesquisaResultado[]
+}
+
+model PesquisaResultado {
+  id            String   @id @default(uuid())
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pesquisaId    String
+  pesquisa      Pesquisa @relation(fields: [pesquisaId], references: [id], onDelete: Cascade)
+  candidato     String
+  cenario       String?
+  intencaoVotos Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CaptacaoDoador {
+  id           String    @id @default(uuid())
+  tenantId     String    @db.Uuid
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nome         String
+  cpfCnpj      String?
+  valorDoado   Float?
+  dataDoacao   DateTime?
+  statusDoacao String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Material {
+  id        String   @id @default(uuid())
+  tenantId  String   @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nome      String
+  tipo      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  estoques Estoque[]
+}
+
+model Estoque {
+  id              String     @id @default(uuid())
+  tenantId        String     @db.Uuid
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  materialId      String
+  material        Material   @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  municipioId     String?    @db.Uuid
+  municipio       Municipio? @relation(fields: [municipioId], references: [id])
+  quantidadeAtual Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  movimentacoes MovimentacaoEstoque[]
+}
+
+model MovimentacaoEstoque {
+  id            String   @id @default(uuid())
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  estoqueId     String
+  estoque       Estoque  @relation(fields: [estoqueId], references: [id], onDelete: Cascade)
+  tipo          String
+  quantidade    Int
+  motivo        String?
+  responsavelId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Contrato {
+  id         String    @id @default(uuid())
+  tenantId   String    @db.Uuid
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  numero     String?
+  objeto     String?
+  valor      Float?
+  dataInicio DateTime?
+  dataFim    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  aprovacoes ContratoAprovacao[]
+}
+
+model ContratoAprovacao {
+  id              String    @id @default(uuid())
+  tenantId        String    @db.Uuid
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contratoId      String
+  contrato        Contrato  @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  aprovadorId     String?
+  status          String    @default("pendente")
+  ordem           Int
+  papel           String
+  exigeObservacao Boolean   @default(false)
+  observacao      String?
+  decididoEm      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model MunicipioEstrategico {
+  id              String    @id @default(uuid())
+  tenantId        String    @db.Uuid
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campanhaId      String?   @db.Uuid
+  municipioId     String    @db.Uuid
+  municipio       Municipio @relation(fields: [municipioId], references: [id], onDelete: Cascade)
+  classificacao   String?
+  prioridade      Int?      @default(3)
+  score           Float?    @default(0)
+  metaVotos       Int?      @default(0)
+  votosHistoricos Int?      @default(0)
+  estrategia      String?
+  observacoes     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model BairroEstrategico {
+  id            String   @id @default(uuid())
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campanhaId    String?  @db.Uuid
+  bairroId      String   @db.Uuid
+  bairro        Bairro   @relation(fields: [bairroId], references: [id], onDelete: Cascade)
+  classificacao String?
+  prioridade    Int?     @default(3)
+  score         Float?   @default(0)
+  metaVotos     Int?     @default(0)
+  estrategia    String?
+  observacoes   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model LiderancaLocal {
+  id              String     @id @default(uuid())
+  tenantId        String     @db.Uuid
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campanhaId      String?    @db.Uuid
+  municipioId     String?    @db.Uuid
+  municipio       Municipio? @relation(fields: [municipioId], references: [id])
+  bairroId        String?    @db.Uuid
+  bairro          Bairro?    @relation(fields: [bairroId], references: [id])
+  pessoaId        String?    @db.Uuid
+  pessoa          Pessoa?    @relation(fields: [pessoaId], references: [id])
+  nome            String
+  classificacao   String?    @default("A")
+  status          String?    @default("mapeado")
+  tipo            String?    @default("comunitaria")
+  votosEstimados  Int?       @default(0)
+  influenciaScore Float?     @default(0)
+  telefone        String?
+  whatsapp        String?
+  observacoes     String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model VereadorHistorico {
+  id                 String     @id @default(uuid())
+  tenantId           String     @db.Uuid
+  tenant             Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campanhaId         String?    @db.Uuid
+  municipioId        String?    @db.Uuid
+  municipio          Municipio? @relation(fields: [municipioId], references: [id])
+  nome               String
+  partido            String?
+  uf                 String?
+  ano                Int?
+  eleito             Boolean?   @default(false)
+  votosRecebidos     Int?       @default(0)
+  faixaVotos         String?
+  votosUltimaEleicao Int?       @default(0)
+  alinhamento        String?    @default("neutro")
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+// Missing reverse relations will be warned by Prisma generate, let's run it.

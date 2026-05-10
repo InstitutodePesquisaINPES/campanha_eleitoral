@@ -62,8 +62,8 @@ export function PessoaDetail({ pessoaId, onBack }: { pessoaId: string; onBack: (
       if (!data) { toast({ variant: "destructive", description: "CEP não encontrado." }); return; }
       const mun = municipios.find((m: any) => m.nome.toLowerCase() === data.localidade.toLowerCase());
       const munId = mun?.id || "";
-      const bairrosDoMun = munId ? (await import("@/integrations/supabase/client")).supabase.from("bairros").select("id, nome").eq("municipio_id", munId) : null;
-      const bairroData = bairrosDoMun ? (await bairrosDoMun).data || [] : [];
+      const bairrosDoMun = munId ? await (await import("@/lib/apiClient")).api.get<any[]>("/territorio/bairros", { params: { municipioId: munId } }) : [];
+      const bairroData = bairrosDoMun || [];
       const bai = bairroData.find((b: any) => b.nome.toLowerCase() === data.bairro.toLowerCase());
       setEForm((prev) => ({ ...prev, logradouro: data.logradouro || prev.logradouro, complemento: data.complemento || prev.complemento, municipio_id: munId || prev.municipio_id, bairro_id: bai?.id || "" }));
       toast({ title: "Endereço preenchido!", description: mun ? "Município localizado." : "Município não cadastrado — selecione manualmente." });

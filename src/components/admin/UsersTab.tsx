@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -29,33 +29,20 @@ export function UsersTab() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data: profiles, error: pErr } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("full_name");
-      if (pErr) throw pErr;
-
-      const { data: allRoles, error: rErr } = await supabase
-        .from("user_roles")
-        .select("*");
-      if (rErr) throw rErr;
-
-      return (profiles || []).map((p: any) => ({
-        id: p.id,
-        user_id: p.user_id,
-        full_name: p.full_name,
-        phone: p.phone,
-        roles: (allRoles || [])
-          .filter((r: any) => r.user_id === p.user_id)
-          .map((r: any) => r.role as AppRole),
+      const data = await api.get<any[]>('/admin/users');
+      return (data || []).map((u: any) => ({
+        id: u.id,
+        user_id: u.id, // API returns User model where id is user_id
+        full_name: u.fullName || u.full_name,
+        phone: u.phone,
+        roles: (u.roles || []).map((r: any) => r.role as AppRole),
       })) as ProfileWithRoles[];
     },
   });
 
   const addRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
-      if (error) throw error;
+      await api.post(`/admin/users/${userId}/roles`, { role });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -68,12 +55,7 @@ export function UsersTab() {
 
   const removeRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId)
-        .eq("role", role);
-      if (error) throw error;
+      await api.delete(`/admin/users/${userId}/roles/${role}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -86,9 +68,7 @@ export function UsersTab() {
 
   const seedUsers = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("seed-test-users");
-      if (error) throw error;
-      return data;
+      return await api.post('/admin/seed-test-users', {});
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });

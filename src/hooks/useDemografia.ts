@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 
 export type Demografia = {
@@ -19,7 +19,7 @@ export function useDemografiaMunicipio(municipioId?: string, ano = 2022) {
     queryKey: ["demografia", municipioId, ano],
     enabled: !!municipioId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await ((api as any) as any)
         .from("municipio_demografia")
         .select("*")
         .eq("municipio_id", municipioId)
@@ -35,7 +35,7 @@ export function useTopMunicipios(metric: "populacao_2022" | "densidade_hab_km2" 
   return useQuery({
     queryKey: ["top-municipios", metric, limit],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await ((api as any) as any)
         .from("municipios")
         .select("id, nome, populacao_2022, area_km2, idh, urbano_pct, densidade_hab_km2")
         .not(metric, "is", null)
@@ -55,7 +55,7 @@ export function useImportJobs() {
   return useQuery({
     queryKey: ["import-jobs"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await ((api as any) as any)
         .from("dados_externos_jobs")
         .select("*")
         .order("created_at", { ascending: false })
@@ -72,7 +72,7 @@ export function useTriggerImport() {
   return useMutation({
     mutationFn: async (input: { fonte: "ibge" | "osm"; uf?: string; municipio_id?: string }) => {
       const fn = input.fonte === "ibge" ? "ibge-import-municipios-ba" : "osm-import-bairros-ba";
-      const { data, error } = await supabase.functions.invoke(fn, {
+      const { data, error } = await (api as any).functions.invoke(fn, {
         body: { uf: input.uf || "BA", municipio_id: input.municipio_id },
       });
       if (error) throw error;

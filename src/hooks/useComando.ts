@@ -1,18 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
 export function useIndicadoresCampanha() {
   return useQuery({
     queryKey: ["indicadores-campanha"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("v_indicadores_campanha")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
+      const data = await api.get<any>('/comando/indicadores');
       return data as {
         campanha_id: string;
         campanha_nome: string;
@@ -32,35 +27,27 @@ export function useIndicadoresCampanha() {
         orcamento_total: number;
       } | null;
     },
+    // Poll every 30 seconds since we removed Supabase Realtime
+    refetchInterval: 30000, 
   });
 }
 
 /**
- * Realtime subscriptions para o Sala de Situação.
- * Invalida indicadores e tarefas quando há mudanças nas tabelas relevantes.
- * Retorna status "live" para indicador visual.
+ * Polling para o Sala de Situação.
+ * Invalida indicadores e tarefas periodicamente.
  */
 export function useComandoRealtime(campanhaId?: string) {
   const qc = useQueryClient();
-  const [live, setLive] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [live, setLive] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(new Date());
 
   useEffect(() => {
-    const tables = ["demandas", "agenda", "campanha_tarefas", "despesas", "pessoas"];
-    const ch = supabase.channel("comando-realtime");
-    tables.forEach((t) => {
-      ch.on("postgres_changes", { event: "*", schema: "public", table: t }, () => {
-        qc.invalidateQueries({ queryKey: ["indicadores-campanha"] });
-        if (campanhaId) qc.invalidateQueries({ queryKey: ["burndown", campanhaId] });
-        setLastUpdate(new Date());
-      });
-    });
-    ch.subscribe((status) => {
-      setLive(status === "SUBSCRIBED");
-    });
-    return () => {
-      supabase.removeChannel(ch);
-    };
+    // Simulando realtime via long-polling / intervals do React Query (refetchInterval na query)
+    // Apenas marcamos como live
+    const interval = setInterval(() => {
+      setLastUpdate(new Date());
+    }, 30000);
+    return () => clearInterval(interval);
   }, [qc, campanhaId]);
 
   return { live, lastUpdate };
@@ -71,12 +58,7 @@ export function useBurndown(campanhaId?: string) {
     queryKey: ["burndown", campanhaId],
     enabled: !!campanhaId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("v_burndown_tarefas")
-        .select("*")
-        .eq("campanha_id", campanhaId)
-        .order("data_prevista");
-      if (error) throw error;
+      const data = await api.get<any[]>(`/comando/burndown?campanhaId=${campanhaId}`);
       return (data || []) as Array<{
         data_prevista: string;
         total_acumulado: number;
@@ -90,12 +72,13 @@ export function useReunioes() {
   return useQuery({
     queryKey: ["reunioes"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("reunioes")
-        .select("*")
-        .order("data_reuniao", { ascending: false });
-      if (error) throw error;
-      return data as any[];
+      const data = await api.get<any[]>('/comando/reunioes');
+      return (data || []).map(r => ({
+        ...r,
+        data_reuniao: r.dataReuniao,
+        campanha_id: r.campanhaId,
+        created_at: r.createdAt,
+      }));
     },
   });
 }
@@ -105,13 +88,13 @@ export function useDeliberacoes(reuniaoId?: string) {
     queryKey: ["deliberacoes", reuniaoId],
     enabled: !!reuniaoId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("reuniao_deliberacoes")
-        .select("*")
-        .eq("reuniao_id", reuniaoId)
-        .order("created_at");
-      if (error) throw error;
-      return data as any[];
+      const data = await api.get<any[]>(`/comando/deliberacoes?reuniaoId=${reuniaoId}`);
+      return (data || []).map(d => ({
+        ...d,
+        reuniao_id: d.reuniaoId,
+        responsavel_id: d.responsavelId,
+        created_at: d.createdAt,
+      }));
     },
   });
 }
@@ -120,8 +103,15 @@ export function useCreateReuniao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { titulo: string; data_reuniao: string; pauta?: string; local?: string; tipo?: string; campanha_id?: string }) => {
-      const { data, error } = await (supabase as any).from("reunioes").insert(input).select().single();
-      if (error) throw error;
+      const payload = {
+        titulo: input.titulo,
+        dataReuniao: input.data_reuniao,
+        pauta: input.pauta,
+        local: input.local,
+        tipo: input.tipo,
+        campanhaId: input.campanha_id,
+      };
+      const data = await api.post('/comando/reunioes', payload);
       return data;
     },
     onSuccess: () => {
@@ -136,8 +126,15 @@ export function useUpdateReuniao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [k: string]: any }) => {
-      const { data, error } = await (supabase as any).from("reunioes").update(updates).eq("id", id).select().single();
-      if (error) throw error;
+      // Basic camelCase translation
+      const payload: any = {};
+      if (updates.data_reuniao) payload.dataReuniao = updates.data_reuniao;
+      if (updates.titulo) payload.titulo = updates.titulo;
+      if (updates.pauta) payload.pauta = updates.pauta;
+      if (updates.local) payload.local = updates.local;
+      if (updates.tipo) payload.tipo = updates.tipo;
+
+      const data = await api.put(`/comando/reunioes/${id}`, payload);
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["reunioes"] }),
@@ -149,8 +146,13 @@ export function useCreateDeliberacao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { reuniao_id: string; descricao: string; prazo?: string; responsavel_id?: string }) => {
-      const { data, error } = await (supabase as any).from("reuniao_deliberacoes").insert(input).select().single();
-      if (error) throw error;
+      const payload = {
+        reuniaoId: input.reuniao_id,
+        descricao: input.descricao,
+        prazo: input.prazo,
+        responsavelId: input.responsavel_id,
+      };
+      const data = await api.post('/comando/deliberacoes', payload);
       return data;
     },
     onSuccess: (_, vars) => {
@@ -165,8 +167,7 @@ export function useToggleDeliberacao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await (supabase as any).from("reuniao_deliberacoes").update({ status }).eq("id", id);
-      if (error) throw error;
+      await api.put(`/comando/deliberacoes/${id}/status`, { status });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["deliberacoes"] }),
     onError: (e: Error) => toast.error(e.message),

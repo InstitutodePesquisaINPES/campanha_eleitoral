@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ export function CampanhaEscopoForm({ cargo, estadoId, municipioId, municipiosFoc
   const { data: estados = [] } = useQuery({
     queryKey: ["estados-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("estados").select("id, sigla, nome").order("nome");
+      const { data } = await (api as any).from("estados").select("id, sigla, nome").order("nome");
       return data ?? [];
     },
   });
@@ -43,7 +43,7 @@ export function CampanhaEscopoForm({ cargo, estadoId, municipioId, municipiosFoc
     queryKey: ["municipios-by-estado", estadoId],
     enabled: !!estadoId,
     queryFn: async () => {
-      const { data } = await supabase.from("municipios").select("id, nome").eq("estado_id", estadoId).order("nome").limit(1000);
+      const { data } = await (api as any).from("municipios").select("id, nome").eq("estado_id", estadoId).order("nome").limit(1000);
       return data ?? [];
     },
   });
@@ -52,7 +52,7 @@ export function CampanhaEscopoForm({ cargo, estadoId, municipioId, municipiosFoc
     queryKey: ["municipios-all"],
     enabled: !estadoId && escopo === "municipal",
     queryFn: async () => {
-      const { data } = await supabase.from("municipios").select("id, nome").order("nome").limit(1000);
+      const { data } = await (api as any).from("municipios").select("id, nome").order("nome").limit(1000);
       return data ?? [];
     },
   });

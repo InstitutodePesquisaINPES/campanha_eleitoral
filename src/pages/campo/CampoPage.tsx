@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,33 +30,32 @@ export default function CampoPage() {
   const { data: roteiros = [], isLoading } = useQuery({
     queryKey: ["roteiros"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("roteiros_visita")
-        .select("*, municipios(nome), roteiros_paradas(id, concluido)")
-        .order("data", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data ?? [];
+      const data = await api.get<any[]>('/campo/roteiros');
+      return (data || []).map(r => ({
+        ...r,
+        roteiros_paradas: r.paradas,
+        municipios: r.municipio
+      }));
     },
   });
 
   const { data: municipios = [] } = useQuery({
     queryKey: ["municipios-campo"],
     queryFn: async () => {
-      const { data } = await supabase.from("municipios").select("id, nome").order("nome").limit(500);
+      // Usar a rota territorial existente se houver, ou temporariamente manter o apiClient
+      const data = await api.get<any[]>('/territorial/municipios').catch(() => []);
       return data ?? [];
     },
   });
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("roteiros_visita").insert({
+      await api.post('/campo/roteiros', {
         nome: form.nome,
         data: form.data,
-        municipio_id: form.municipio_id || null,
+        municipioId: form.municipio_id || null,
         observacoes: form.observacoes || null,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["roteiros"] });
@@ -69,8 +68,7 @@ export default function CampoPage() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("roteiros_visita").update({ status: status as any }).eq("id", id);
-      if (error) throw error;
+      await api.put(`/campo/roteiros/${id}/status`, { status });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["roteiros"] }),
   });

@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Archive, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -320,7 +320,7 @@ export function TSECsvUpload() {
   const sendChunk = async (registros: any[]): Promise<number> => {
     let attempt = 0;
     while (true) {
-      const { data, error } = await supabase.functions.invoke("tse-ingest-chunk-public", {
+      const { data, error } = await (api as any).functions.invoke("tse-ingest-chunk-public", {
         body: { tabela, registros },
       });
       if (error) throw new Error(error.message);

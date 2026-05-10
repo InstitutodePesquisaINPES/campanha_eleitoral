@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Sun, Moon, Monitor, Check, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUpdateSystemSetting } from "@/hooks/useSystemSettings";
 
 const MODE_OPTIONS: { value: ThemeMode; label: string; icon: React.ElementType }[] = [
   { value: "light", label: "Claro", icon: Sun },
@@ -13,7 +14,13 @@ const MODE_OPTIONS: { value: ThemeMode; label: string; icon: React.ElementType }
 ];
 
 export function ThemePanel() {
-  const { preset, mode, setPreset, setMode } = useTheme();
+  const { preset, mode, tier, setPreset, setMode, setTier } = useTheme();
+  const updateSettings = useUpdateSystemSetting();
+
+  const handlePresetChange = (newPreset: ThemePreset) => {
+    setPreset(newPreset);
+    updateSettings.mutate({ theme_preset: newPreset });
+  };
 
   return (
     <Card className="shadow-sm border-slate-200 dark:border-slate-800">
@@ -67,7 +74,7 @@ export function ThemePanel() {
                 key={theme.id}
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setPreset(theme.id as ThemePreset)}
+                onClick={() => handlePresetChange(theme.id as ThemePreset)}
                 className={cn(
                   "relative flex flex-col items-center gap-2 p-3 rounded-2xl border-2 text-left transition-all duration-200 group",
                   preset === theme.id
@@ -104,6 +111,39 @@ export function ThemePanel() {
           </div>
         </div>
 
+        {/* Tier selector */}
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-3">
+            Padrão de Layout
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setTier("professional"); updateSettings.mutate({ theme_tier: "professional" }) }}
+              className={cn(
+                "flex-1 flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all duration-200",
+                tier === "professional"
+                  ? "border-primary bg-primary/5 text-primary shadow-sm"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600"
+              )}
+            >
+              <span className="text-xs font-bold">Profissional (Flat)</span>
+              <span className="text-[10px] opacity-80">Rápido e limpo</span>
+            </button>
+            <button
+              onClick={() => { setTier("enterprise"); updateSettings.mutate({ theme_tier: "enterprise" }) }}
+              className={cn(
+                "flex-1 flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all duration-200",
+                tier === "enterprise"
+                  ? "border-primary bg-primary/5 text-primary shadow-sm"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600"
+              )}
+            >
+              <span className="text-xs font-bold">Enterprise (Glass)</span>
+              <span className="text-[10px] opacity-80">Premium e animado</span>
+            </button>
+          </div>
+        </div>
+
         {/* Live preview indicator */}
         <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
           <span className="relative flex h-3 w-3">
@@ -111,7 +151,7 @@ export function ThemePanel() {
             <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
           </span>
           <p className="text-xs text-slate-600 dark:text-slate-400">
-            Tema aplicado em <strong className="text-primary">tempo real</strong>. As preferências são salvas por navegador.
+            O Tema escolhido é <strong className="text-primary">Global para sua Campanha</strong>. Todos os membros da equipe verão esta paleta de cores. O Modo Claro/Escuro é preferência de navegador.
           </p>
         </div>
       </CardContent>

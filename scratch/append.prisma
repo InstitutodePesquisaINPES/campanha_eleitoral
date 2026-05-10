@@ -1,0 +1,220 @@
+
+// ─── WAR ROOM (COMUNICAÇÃO) ──────────────────────────────────
+
+model ComunicacaoPauta {
+  id              String   @id @default(uuid()) @db.Uuid
+  campanhaId      String?  @map("campanha_id") @db.Uuid
+  titulo          String
+  descricao       String?
+  status          String   @default("planejada")
+  dataPrevista    DateTime? @map("data_prevista")
+  responsavelId   String?  @map("responsavel_id") @db.Uuid
+  prioridade      String   @default("media")
+  tags            String[]
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  tenantId        String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pecas           ComunicacaoPeca[]
+
+  @@map("comunicacao_pautas")
+}
+
+model ComunicacaoPeca {
+  id              String   @id @default(uuid()) @db.Uuid
+  pautaId         String?  @map("pauta_id") @db.Uuid
+  campanhaId      String?  @map("campanha_id") @db.Uuid
+  formato         String
+  titulo          String
+  conteudo        String?
+  status          String   @default("rascunho")
+  dataPublicacao  DateTime? @map("data_publicacao")
+  plataformas     String[]
+  urlArquivo      String?  @map("url_arquivo")
+  responsavelId   String?  @map("responsavel_id") @db.Uuid
+  aprovadoPor     String?  @map("aprovado_por") @db.Uuid
+  aprovadoEm      DateTime? @map("aprovado_em")
+  observacoesJuridicas String? @map("observacoes_juridicas")
+  versao          Int      @default(1)
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  tenantId        String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pauta           ComunicacaoPauta? @relation(fields: [pautaId], references: [id], onDelete: SetNull)
+
+  @@map("comunicacao_pecas")
+}
+
+model ComunicacaoMencao {
+  id              String   @id @default(uuid()) @db.Uuid
+  campanhaId      String?  @map("campanha_id") @db.Uuid
+  canal           String
+  autor           String?
+  url             String?
+  conteudo        String
+  sentimento      String   @default("neutro")
+  status          String   @default("novo")
+  alcanceEstimado Int?     @map("alcance_estimado")
+  resposta        String?
+  respondidoPor   String?  @map("respondido_por") @db.Uuid
+  respondidoEm    DateTime? @map("respondido_em")
+  dataMencao      DateTime @map("data_mencao")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  tenantId        String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("comunicacao_mencoes")
+}
+
+// ─── CAMPANHAS (CORE) ──────────────────────────────────────
+
+model Campanha {
+  id                String    @id @default(uuid()) @db.Uuid
+  nome              String
+  cargo             String
+  partidoSigla      String?   @map("partido_sigla")
+  numeroUrna        String?   @map("numero_urna")
+  coligacao         String?
+  estadoId          String?   @map("estado_id") @db.Uuid
+  municipioId       String?   @map("municipio_id") @db.Uuid
+  municipiosFocoIds String[]  @map("municipios_foco_ids")
+  dataEleicao       DateTime? @map("data_eleicao")
+  dataInicioPlano   DateTime? @map("data_inicio_plano")
+  metaVotos         Int?      @map("meta_votos")
+  orcamentoTotal    Float?    @map("orcamento_total")
+  observacoes       String?
+  ativa             Boolean   @default(true)
+  candidatoPessoaId String?   @map("candidato_pessoa_id") @db.Uuid
+  
+  tenantId          String    @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tarefas CampanhaTarefa[]
+  fases   CampanhaFase[]
+  metas   CampanhaMeta[]
+  semanas CampanhaSemana[]
+
+  @@map("campanhas")
+}
+
+model CampanhaFase {
+  id          String   @id @default(uuid()) @db.Uuid
+  campanhaId  String   @map("campanha_id") @db.Uuid
+  nome        String
+  ordem       Int
+  cor         String?
+  dataInicio  DateTime? @map("data_inicio")
+  dataFim     DateTime? @map("data_fim")
+  
+  tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  campanha Campanha @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  tarefas  CampanhaTarefa[]
+
+  @@map("campanha_fases")
+}
+
+model CampanhaTarefa {
+  id          String   @id @default(uuid()) @db.Uuid
+  campanhaId  String   @map("campanha_id") @db.Uuid
+  faseId      String?  @map("fase_id") @db.Uuid
+  oQueE       String?  @map("o_que_e")
+  oQueFaz     String?  @map("o_que_faz")
+  descricao   String?
+  entregaveis String?
+  prioridade  String   @default("media")
+  area        String   @default("geral")
+  dia         Int      @default(0)
+  ordem       Int      @default(0)
+  isMarco     Boolean  @default(false) @map("is_marco")
+  dataPrevista DateTime? @map("data_prevista")
+  dataConclusao DateTime? @map("data_conclusao")
+  
+  faseLegal   String?  @map("fase_legal")
+  permitidoAntesRegistro Boolean @default(true) @map("permitido_antes_registro")
+  respaldoLegal String? @map("respaldo_legal")
+  observacoes   String?
+  
+  tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  campanha Campanha @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  fase     CampanhaFase? @relation(fields: [faseId], references: [id], onDelete: SetNull)
+  subtarefas CampanhaSubtarefa[]
+
+  @@map("campanha_tarefas")
+}
+
+model CampanhaSubtarefa {
+  id          String   @id @default(uuid()) @db.Uuid
+  tarefaId    String   @map("tarefa_id") @db.Uuid
+  titulo      String
+  status      String   @default("pendente")
+  responsavelId String? @map("responsavel_id") @db.Uuid
+  
+  tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tarefa CampanhaTarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+
+  @@map("campanha_subtarefas")
+}
+
+model CampanhaMeta {
+  id          String   @id @default(uuid()) @db.Uuid
+  campanhaId  String   @map("campanha_id") @db.Uuid
+  nome        String
+  indicador   String
+  valorAlvo   Float    @map("valor_alvo")
+  valorAtual  Float    @default(0) @map("valor_atual")
+  unidade     String?
+  dataPrazo   DateTime? @map("data_prazo")
+  
+  tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  campanha Campanha @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  metasMunicipio CampanhaMetaMunicipio[]
+
+  @@map("campanha_metas")
+}
+
+model CampanhaMetaMunicipio {
+  id          String   @id @default(uuid()) @db.Uuid
+  metaId      String   @map("meta_id") @db.Uuid
+  municipioId String   @map("municipio_id") @db.Uuid
+  valorAlvo   Float    @map("valor_alvo")
+  valorAtual  Float    @default(0) @map("valor_atual")
+  
+  tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  meta CampanhaMeta @relation(fields: [metaId], references: [id], onDelete: Cascade)
+
+  @@map("campanha_metas_municipio")
+}
+
+model CampanhaSemana {
+  id          String   @id @default(uuid()) @db.Uuid
+  campanhaId  String   @map("campanha_id") @db.Uuid
+  numero      Int
+  dataInicio  DateTime @map("data_inicio")
+  dataFim     DateTime @map("data_fim")
+  foco        String?
+  
+  tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  campanha Campanha @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+
+  @@map("campanha_semanas")
+}

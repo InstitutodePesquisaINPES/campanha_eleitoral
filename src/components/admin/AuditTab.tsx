@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -26,12 +26,7 @@ export function AuditTab() {
   const { data: logs = [], isLoading, isFetching } = useQuery({
     queryKey: ["audit-logs", filterAction, filterTable, page],
     queryFn: async () => {
-      let q = supabase.from("audit_logs").select("*").order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-      if (filterAction !== "all") q = q.eq("action", filterAction);
-      if (filterTable) q = q.ilike("table_name", `%${filterTable}%`);
-      const { data, error } = await q;
-      if (error) throw error;
+      const data = await api.get<any[]>(`/admin/audit?page=${page}&action=${filterAction}&table=${filterTable}`);
       return data || [];
     },
   });
@@ -85,11 +80,11 @@ export function AuditTab() {
               <TableBody>
                 {logs.map((log: any) => (
                   <TableRow key={log.id} className="cursor-pointer" onClick={() => setSelected(log)}>
-                    <TableCell className="text-xs whitespace-nowrap">{new Date(log.created_at).toLocaleString("pt-BR")}</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{new Date(log.createdAt || log.created_at).toLocaleString("pt-BR")}</TableCell>
                     <TableCell><Badge className={actionColors[log.action] || ""} variant="outline">{log.action}</Badge></TableCell>
-                    <TableCell className="text-xs">{log.table_name}</TableCell>
-                    <TableCell className="text-xs font-mono truncate max-w-[120px]">{log.record_id || "—"}</TableCell>
-                    <TableCell className="text-xs font-mono truncate max-w-[120px]">{log.user_id ? log.user_id.slice(0, 8) + "…" : "sistema"}</TableCell>
+                    <TableCell className="text-xs">{log.tableName || log.table_name}</TableCell>
+                    <TableCell className="text-xs font-mono truncate max-w-[120px]">{log.recordId || log.record_id || "—"}</TableCell>
+                    <TableCell className="text-xs font-mono truncate max-w-[120px]">{log.userId || log.user_id ? (log.userId || log.user_id).slice(0, 8) + "…" : "sistema"}</TableCell>
                     <TableCell><Eye className="h-4 w-4 text-muted-foreground" /></TableCell>
                   </TableRow>
                 ))}

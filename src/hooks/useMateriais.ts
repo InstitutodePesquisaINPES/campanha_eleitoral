@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 
 type TipoMaterial = "grafico" | "brinde" | "camiseta" | "adesivo" | "banner" | "santinho" | "outros";
@@ -19,9 +19,14 @@ export function useMateriais() {
   return useQuery({
     queryKey: ["materiais"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("materiais").select("*").order("nome");
-      if (error) throw error;
-      return data || [];
+      const data = await api.get<any[]>('/materiais');
+      // Map camelCase from backend to snake_case for frontend
+      return (data || []).map(m => ({
+        ...m,
+        custo_unitario: m.custoUnitario,
+        created_at: m.createdAt,
+        updated_at: m.updatedAt,
+      }));
     },
   });
 }
@@ -30,8 +35,13 @@ export function useCreateMaterial() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (values: { nome: string; tipo?: TipoMaterial; descricao?: string; custo_unitario?: number }) => {
-      const { data, error } = await supabase.from("materiais").insert(values).select().single();
-      if (error) throw error;
+      const payload = {
+        nome: values.nome,
+        tipo: values.tipo,
+        descricao: values.descricao,
+        custoUnitario: values.custo_unitario,
+      };
+      const data = await api.post('/materiais', payload);
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["materiais"] }),
@@ -42,8 +52,7 @@ export function useDeleteMaterial() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("materiais").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/materiais/${id}`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["materiais"] }),
   });
@@ -54,9 +63,18 @@ export function useEstoques() {
   return useQuery({
     queryKey: ["estoques"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("estoques").select("*, materiais(nome, tipo), municipios(nome)").order("created_at");
-      if (error) throw error;
-      return data || [];
+      const data = await api.get<any[]>('/materiais/estoques');
+      return (data || []).map(e => ({
+        ...e,
+        material_id: e.materialId,
+        centro_distribuicao: e.centroDistribuicao,
+        quantidade_atual: e.quantidadeAtual,
+        quantidade_minima: e.quantidadeMinima,
+        municipio_id: e.municipioId,
+        created_at: e.createdAt,
+        materiais: e.material,
+        municipios: e.municipio,
+      }));
     },
   });
 }
@@ -65,8 +83,14 @@ export function useCreateEstoque() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (values: { material_id: string; centro_distribuicao?: string; quantidade_atual?: number; quantidade_minima?: number; municipio_id?: string }) => {
-      const { data, error } = await supabase.from("estoques").insert(values).select().single();
-      if (error) throw error;
+      const payload = {
+        materialId: values.material_id,
+        centroDistribuicao: values.centro_distribuicao,
+        quantidadeAtual: values.quantidade_atual,
+        quantidadeMinima: values.quantidade_minima,
+        municipioId: values.municipio_id,
+      };
+      const data = await api.post('/materiais/estoques', payload);
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["estoques"] }),
@@ -78,9 +102,13 @@ export function useMovimentacoes(estoqueId?: string) {
   return useQuery({
     queryKey: ["movimentacoes_estoque", estoqueId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("movimentacoes_estoque").select("*").eq("estoque_id", estoqueId!).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
+      const data = await api.get<any[]>(`/materiais/movimentacoes?estoqueId=${estoqueId}`);
+      return (data || []).map(m => ({
+        ...m,
+        estoque_id: m.estoqueId,
+        responsavel_id: m.responsavelId,
+        created_at: m.createdAt,
+      }));
     },
     enabled: !!estoqueId,
   });
@@ -91,8 +119,13 @@ export function useCreateMovimentacao() {
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (values: { estoque_id: string; tipo: TipoMovimentacao; quantidade: number; motivo?: string }) => {
-      const { data, error } = await supabase.from("movimentacoes_estoque").insert({ ...values, responsavel_id: user?.id }).select().single();
-      if (error) throw error;
+      const payload = {
+        estoqueId: values.estoque_id,
+        tipo: values.tipo,
+        quantidade: values.quantidade,
+        motivo: values.motivo,
+      };
+      const data = await api.post('/materiais/movimentacoes', payload);
       return data;
     },
     onSuccess: (_, v) => {

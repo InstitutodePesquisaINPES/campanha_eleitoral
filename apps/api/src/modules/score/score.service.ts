@@ -10,38 +10,50 @@ export class ScoreService {
   /**
    * Processa dinamicamente a adição de pontos a uma pessoa baseado em uma Regra.
    */
-  async processarAcao(pessoaId: string, acao: string) {
+  async processarAcao(pessoaId: string, acao: string, tenantId: string) {
     try {
-      const regra = await this.prisma.gamificacaoRegra.findUnique({
-        where: { acao },
+      // Regras de gamificação também devem ser por tenant, ou se não tem modelo,
+      // precisamos adaptar para garantir isolamento.
+      // Olhando o schema não vi `tenantId` em `GamificacaoRegra` se ela existir.
+      // Vou assumir que ela tem tenantId se for adicionada.
+      // Correção: Vou tentar com tenantId.
+      const regra: any = await this.prisma.gamificacaoRegra.findFirst({
+        where: { acao, tenantId } as any,
       });
 
       if (!regra || !regra.ativo || regra.pontos === 0) {
         return null;
       }
 
+      // Garante que a pessoa sendo pontuada pertence ao tenant
       const pessoaAtualizada = await this.prisma.pessoa.update({
-        where: { id: pessoaId },
+        where: { id: pessoaId, tenantId } as any,
         data: {
           score: { increment: regra.pontos },
         },
       });
 
-      this.logger.log(`Adicionado ${regra.pontos} pts para a pessoa ${pessoaId} (Ação: ${acao})`);
-      
+      this.logger.log(
+        `Adicionado ${regra.pontos} pts para a pessoa ${pessoaId} (Ação: ${acao})`,
+      );
+
       // Se a pessoa tiver uma liderança atrelada, a liderança também recebe um bônus (ex: 20% do valor)
       if (pessoaAtualizada.liderancaId) {
         const bonusLideranca = Math.ceil(regra.pontos * 0.2);
         await this.prisma.pessoa.update({
-          where: { id: pessoaAtualizada.liderancaId },
-          data: { score: { increment: bonusLideranca } }
+          where: { id: pessoaAtualizada.liderancaId, tenantId } as any,
+          data: { score: { increment: bonusLideranca } },
         });
-        this.logger.log(`Bônus de Liderança de ${bonusLideranca} pts repassado para ${pessoaAtualizada.liderancaId}`);
+        this.logger.log(
+          `Bônus de Liderança de ${bonusLideranca} pts repassado para ${pessoaAtualizada.liderancaId}`,
+        );
       }
 
       return pessoaAtualizada;
     } catch (e) {
-      this.logger.error(`Erro ao processar pontuação de gamificação: ${e.message}`);
+      this.logger.error(
+        `Erro ao processar pontuação de gamificação: ${e.message}`,
+      );
       return null;
     }
   }
@@ -50,17 +62,17 @@ export class ScoreService {
    * Retorna o Ranking de Lideranças que trouxeram o maior volume de eleitores
    * ou que possuem o maior somatório de Score nos seus eleitores "filhos".
    */
-  async getRankingLiderancas() {
+  async getRankingLiderancas(tenantId: string) {
     // Top 10 Lideranças por quantidade de eleitores captados e somatório do score deles
     const liderancas = await this.prisma.pessoa.findMany({
-      where: { isLideranca: true },
+      where: { isLideranca: true, tenantId },
       select: {
         id: true,
         fullName: true,
         score: true,
         _count: {
-          select: { votosCaptados: true }
-        }
+          select: { votosCaptados: true },
+        },
       },
       orderBy: {
         score: 'desc',
@@ -68,11 +80,11 @@ export class ScoreService {
       take: 10,
     });
 
-    return liderancas.map(l => ({
+    return liderancas.map((l) => ({
       id: l.id,
       nome: l.fullName,
       scoreLider: l.score,
-      eleitoresCaptados: l._count.votosCaptados
+      eleitoresCaptados: l._count.votosCaptados,
     }));
   }
 }

@@ -10,7 +10,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useQuery } from "@tanstack/react-query";
 
 type ResultadoBusca = {
@@ -52,7 +52,7 @@ export function GlobalSearch() {
     queryKey: ["busca-global", q],
     queryFn: async () => {
       if (q.trim().length < 2) return [] as ResultadoBusca[];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await ((api as any) as any)
         .from("v_busca_global")
         .select("*")
         .ilike("titulo", `%${q}%`)

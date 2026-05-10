@@ -6,18 +6,25 @@ export class CrmService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ---- PESSOAS ----
-  async findAll(tenantId: string, search?: string, nivel?: string, tipo?: string) {
+  async findAll(
+    tenantId: string,
+    search?: string,
+    nivel?: string,
+    tipo?: string,
+  ) {
     return this.prisma.pessoa.findMany({
       where: {
         tenantId,
         AND: [
-          search ? {
-            OR: [
-              { fullName: { contains: search, mode: 'insensitive' } },
-              { cpf: { contains: search } },
-              { cnpj: { contains: search } },
-            ]
-          } : {},
+          search
+            ? {
+                OR: [
+                  { fullName: { contains: search, mode: 'insensitive' } },
+                  { cpf: { contains: search } },
+                  { cnpj: { contains: search } },
+                ],
+              }
+            : {},
           nivel && nivel !== 'all' ? { nivelRelacionamento: nivel } : {},
           tipo && tipo !== 'all' ? { tipoPessoa: tipo } : {},
         ],
@@ -40,7 +47,7 @@ export class CrmService {
         contatos: true,
         enderecos: true,
         tags: { include: { tag: true } },
-      }
+      },
     });
     if (!pessoa) throw new NotFoundException(`Pessoa not found`);
     return pessoa;
@@ -103,7 +110,10 @@ export class CrmService {
 
   // ---- TAGS ----
   async getTags(tenantId: string) {
-    return this.prisma.tag.findMany({ where: { tenantId }, orderBy: { nome: 'asc' } });
+    return this.prisma.tag.findMany({
+      where: { tenantId },
+      orderBy: { nome: 'asc' },
+    });
   }
 
   async createTag(data: any, tenantId: string) {
@@ -116,7 +126,7 @@ export class CrmService {
 
   async removePessoaTag(pessoaId: string, tagId: string) {
     return this.prisma.pessoaTag.delete({
-      where: { pessoaId_tagId: { pessoaId, tagId } }
+      where: { pessoaId_tagId: { pessoaId, tagId } },
     });
   }
 }

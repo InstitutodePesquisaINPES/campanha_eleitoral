@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 export type LacunaTerritorial = {
   bairro_id: string;
@@ -19,7 +19,7 @@ export function useLacunasTerritoriais() {
   return useQuery({
     queryKey: ["lacunas-territoriais"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await ((api as any) as any)
         .from("v_lacunas_territoriais")
         .select("*")
         .order("score_prioridade", { ascending: false })

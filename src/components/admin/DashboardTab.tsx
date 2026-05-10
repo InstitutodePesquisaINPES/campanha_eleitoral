@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, FileText, Calendar, DollarSign } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
@@ -19,7 +19,7 @@ export function DashboardTab() {
       const out: Record<string, number> = {};
       await Promise.all(
         TABLES.map(async (t) => {
-          const { count } = await supabase.from(t.table as any).select("*", { count: "exact", head: true });
+          const { count } = await (api as any).from(t.table as any).select("*", { count: "exact", head: true });
           out[t.table] = count ?? 0;
         }),
       );
@@ -30,7 +30,7 @@ export function DashboardTab() {
   const { data: serie = [], isLoading: ls } = useQuery({
     queryKey: ["admin-stats-30d"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("v_admin_stats_30d" as any).select("*");
+      const { data, error } = await (api as any).from("v_admin_stats_30d" as any).select("*");
       if (error) throw error;
       return (data || []).map((r: any) => ({
         dia: new Date(r.dia).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),

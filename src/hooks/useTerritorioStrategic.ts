@@ -1,6 +1,6 @@
 // Visão estratégica de territórios — agrega dados cruzados (eleitorado, bairros, pessoas, classificação)
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 // IDs IBGE da microrregião de Vitória da Conquista (32 municípios) usados como "foco padrão" do Kiribamba
 export const MICRORREGIAO_VC_IBGE = [
@@ -60,67 +60,8 @@ export function useStrategicMunicipios() {
   return useQuery({
     queryKey: ["strategic-municipios"],
     queryFn: async (): Promise<StrategicMunicipio[]> => {
-      // 1. busca municípios da BA
-      const [{ data: estados }] = await Promise.all([
-        supabase.from("estados").select("id, sigla").eq("sigla", "BA"),
-      ]);
-      const estadoBaId = estados?.[0]?.id;
-      const { data: municipios } = await supabase
-        .from("municipios")
-        .select("*, estados(sigla)")
-        .eq("estado_id", estadoBaId || "")
-        .order("nome");
-      if (!municipios) return [];
-
-      // 2. busca foco da campanha ativa
-      const { data: campanhaAtiva } = await supabase
-        .from("campanhas")
-        .select("municipios_foco_ids")
-        .eq("ativa", true)
-        .limit(1)
-        .maybeSingle();
-      const focoIds = new Set(campanhaAtiva?.municipios_foco_ids || []);
-
-      // 3. contagem de bairros por município
-      const { data: bairrosAgg } = await supabase
-        .from("bairros")
-        .select("municipio_id");
-      const bairrosCount = new Map<string, number>();
-      (bairrosAgg || []).forEach((b: any) => {
-        bairrosCount.set(b.municipio_id, (bairrosCount.get(b.municipio_id) || 0) + 1);
-      });
-
-      // 4. contagem de pessoas por município (via endereços)
-      const { data: pessoasAgg } = await supabase
-        .from("pessoas_enderecos")
-        .select("municipio_id, pessoa_id");
-      const pessoasCount = new Map<string, Set<string>>();
-      (pessoasAgg || []).forEach((p: any) => {
-        if (!p.municipio_id) return;
-        if (!pessoasCount.has(p.municipio_id)) pessoasCount.set(p.municipio_id, new Set());
-        pessoasCount.get(p.municipio_id)!.add(p.pessoa_id);
-      });
-
-      return municipios.map((m: any) => {
-        const isFocoCampanha = focoIds.has(m.id);
-        const isMicrorregiaoVC = m.geocodigo_ibge && MICRORREGIAO_VC_IBGE.includes(m.geocodigo_ibge);
-        return {
-          id: m.id,
-          nome: m.nome,
-          estado_sigla: m.estados?.sigla || "BA",
-          geocodigo_ibge: m.geocodigo_ibge,
-          populacao: m.populacao,
-          eleitorado_total: m.eleitorado_total,
-          latitude: m.latitude,
-          longitude: m.longitude,
-          classificacao_estrategica: m.classificacao_estrategica,
-          prioridade_campanha: m.prioridade_campanha,
-          notas_estrategicas: m.notas_estrategicas,
-          bairros_count: bairrosCount.get(m.id) || 0,
-          pessoas_count: pessoasCount.get(m.id)?.size || 0,
-          is_foco: isFocoCampanha || isMicrorregiaoVC,
-        };
-      });
+      const data = await api.get<StrategicMunicipio[]>('/territorio/municipios/strategic');
+      return data || [];
     },
   });
 }
@@ -135,8 +76,7 @@ export function useUpdateMunicipioStrategy() {
       notas_estrategicas?: string | null;
     }) => {
       const { id, ...patch } = vals;
-      const { error } = await supabase.from("municipios").update(patch).eq("id", id);
-      if (error) throw error;
+      await api.put(`/territorio/municipios/${id}/strategy`, patch);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["strategic-municipios"] });

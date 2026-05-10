@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
-import type { Database } from "@/integrations/supabase/types";
+
 
 export type CampanhaParametros = Database["public"]["Tables"]["campanha_parametros"]["Row"];
 export type CampanhaParametrosUpdate = Database["public"]["Tables"]["campanha_parametros"]["Update"];
@@ -44,8 +44,8 @@ export function useCampanhaParametros(campanhaId?: string) {
     enabled: !!campanhaId,
     queryFn: async () => {
       // garante que existe
-      await supabase.rpc("inicializar_parametros_campanha" as never, { _campanha_id: campanhaId } as never);
-      const { data, error } = await supabase
+      await (api as any).rpc("inicializar_parametros_campanha" as never, { _campanha_id: campanhaId } as never);
+      const { data, error } = await (api as any)
         .from("campanha_parametros")
         .select("*")
         .eq("campanha_id", campanhaId!)
@@ -60,7 +60,7 @@ export function useUpdateCampanhaParametros() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ campanha_id, ...updates }: CampanhaParametrosUpdate & { campanha_id: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await (api as any)
         .from("campanha_parametros")
         .update(updates)
         .eq("campanha_id", campanha_id)
@@ -81,7 +81,7 @@ export function useRegerarPlano() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (campanhaId: string) => {
-      const { error } = await supabase.rpc("gerar_plano_90_dias" as never, { _campanha_id: campanhaId } as never);
+      const { error } = await (api as any).rpc("gerar_plano_90_dias" as never, { _campanha_id: campanhaId } as never);
       if (error) throw error;
     },
     onSuccess: (_d, campanhaId) => {

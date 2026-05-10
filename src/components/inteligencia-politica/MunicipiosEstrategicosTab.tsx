@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMunicipiosEstrategicos, useUpsertMunicipioEstrategico, useDeleteMunicipioEstrategico, CLASS_COLOR, CLASS_LABEL, type ClassificacaoEstrategica } from "@/hooks/useInteligenciaPolitica";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ export function MunicipiosEstrategicosTab({ campanhaId }: { campanhaId: string }
   const { data: municipios = [] } = useQuery({
     queryKey: ["municipios-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("municipios").select("id, nome").order("nome").limit(500);
+      const { data } = await (api as any).from("municipios").select("id, nome").order("nome").limit(500);
       return data ?? [];
     },
   });

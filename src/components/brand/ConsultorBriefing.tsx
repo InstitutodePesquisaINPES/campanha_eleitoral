@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useCampanhaAtiva, useTarefas, useMetas } from "@/hooks/useCampanhas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ export function ConsultorBriefing() {
   const { data: pessoasCount = 0 } = useQuery({
     queryKey: ["consultor-pessoas-count"],
     queryFn: async () => {
-      const { count } = await supabase.from("pessoas").select("id", { count: "exact", head: true });
+      const { count } = await (api as any).from("pessoas").select("id", { count: "exact", head: true });
       return count ?? 0;
     },
   });

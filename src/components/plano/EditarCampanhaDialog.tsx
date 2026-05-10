@@ -14,7 +14,7 @@ import { Pencil, User as UserIcon, MapPin, Vote, Wallet, Scale, FileText, Check 
 import { toast } from "sonner";
 import { CampanhaEscopoForm, escopoDoCargo, type CargoEleitoral } from "./CampanhaEscopoForm";
 import { useUpdateCampanha, type Campanha } from "@/hooks/useCampanhas";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { cn } from "@/lib/utils";
 
 const cargos: { v: CargoEleitoral; l: string }[] = [
@@ -40,7 +40,7 @@ function CandidatoPicker({ value, onChange }: { value: string | null; onChange: 
   const { data: pessoas = [] } = useQuery({
     queryKey: ["pessoas-picker", search],
     queryFn: async () => {
-      let q = supabase.from("pessoas").select("id, full_name").order("full_name").limit(20);
+      let q = (api as any).from("pessoas").select("id, full_name").order("full_name").limit(20);
       if (search.trim()) q = q.ilike("full_name", `%${search.trim()}%`);
       const { data, error } = await q;
       if (error) throw error;
@@ -52,7 +52,7 @@ function CandidatoPicker({ value, onChange }: { value: string | null; onChange: 
     queryKey: ["pessoa-selected", value],
     enabled: !!value,
     queryFn: async () => {
-      const { data } = await supabase.from("pessoas").select("id, full_name").eq("id", value!).maybeSingle();
+      const { data } = await (api as any).from("pessoas").select("id, full_name").eq("id", value!).maybeSingle();
       return data;
     },
   });

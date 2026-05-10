@@ -1,16 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CrmService } from './crm.service';
 import { SegmentacaoService } from './segmentacao.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
-import { CurrentTenant, CurrentUser } from '../../common/decorators/tenant.decorator';
+import {
+  CurrentTenant,
+  CurrentUser,
+} from '../../common/decorators/tenant.decorator';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('pessoas')
 export class CrmController {
   constructor(
     private readonly crmService: CrmService,
-    private readonly segmentacaoService: SegmentacaoService
+    private readonly segmentacaoService: SegmentacaoService,
   ) {}
 
   @Post('segmentacao')
@@ -44,12 +57,20 @@ export class CrmController {
   }
 
   @Post()
-  create(@Body() data: any, @CurrentUser() userId: string, @CurrentTenant() tenantId: string) {
+  create(
+    @Body() data: any,
+    @CurrentUser() userId: string,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.crmService.create(data, userId, tenantId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() data: any, @CurrentTenant() tenantId: string) {
+  update(
+    @Param('id') id: string,
+    @Body() data: any,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.crmService.update(id, data, tenantId);
   }
 

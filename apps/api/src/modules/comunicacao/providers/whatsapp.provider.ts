@@ -16,14 +16,21 @@ export class WhatsappProvider {
       this.isEnabled = true;
       this.logger.log('Provedor de WhatsApp Ativado (Variáveis Encontradas).');
     } else {
-      this.logger.warn('Provedor de WhatsApp Desativado (Variáveis ausentes). O sistema funcionará com bypass.');
+      this.logger.warn(
+        'Provedor de WhatsApp Desativado (Variáveis ausentes). O sistema funcionará com bypass.',
+      );
     }
   }
 
-  async enviarMensagem(telefone: string, texto: string): Promise<{ success: boolean; providerId?: string; error?: string }> {
+  async enviarMensagem(
+    telefone: string,
+    texto: string,
+  ): Promise<{ success: boolean; providerId?: string; error?: string }> {
     if (!this.isEnabled) {
       // Simula sucesso sem quebrar para que a aplicação não crashe
-      this.logger.log(`[BYPASS] Simulando envio WhatsApp para ${telefone}: ${texto.substring(0, 20)}...`);
+      this.logger.log(
+        `[BYPASS] Simulando envio WhatsApp para ${telefone}: ${texto.substring(0, 20)}...`,
+      );
       return { success: true, providerId: `simulated-${Date.now()}` };
     }
 
@@ -34,7 +41,9 @@ export class WhatsappProvider {
       this.logger.log(`Enviando WhatsApp via API Real para ${telefone}`);
       return { success: true, providerId: `evo-${Date.now()}` };
     } catch (e) {
-      this.logger.error(`Falha no envio de WhatsApp para ${telefone}: ${e.message}`);
+      this.logger.error(
+        `Falha no envio de WhatsApp para ${telefone}: ${e.message}`,
+      );
       return { success: false, error: e.message };
     }
   }

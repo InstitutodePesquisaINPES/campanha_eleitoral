@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ export function CentrosCustoTab() {
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["admin-centros-custo"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("centros_custo").select("*").order("nome");
+      const { data, error } = await (api as any).from("centros_custo").select("*").order("nome");
       if (error) throw error;
       return data || [];
     },
@@ -26,7 +26,7 @@ export function CentrosCustoTab() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("centros_custo").insert({
+      const { error } = await (api as any).from("centros_custo").insert({
         nome, descricao: descricao || null, orcamento_previsto: Number(orcamento) || 0,
       });
       if (error) throw error;
@@ -41,7 +41,7 @@ export function CentrosCustoTab() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("centros_custo").delete().eq("id", id);
+      const { error } = await (api as any).from("centros_custo").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,12 +23,12 @@ export function ImportIBGETab() {
       const estado = estados.find((e) => e.sigla === uf);
       if (!estado) throw new Error("Estado não encontrado");
 
-      const { data: dbEstado } = await supabase
+      const { data: dbEstado } = await (api as any)
         .from("estados").select("id").eq("sigla", uf).maybeSingle();
 
       let estadoId = dbEstado?.id;
       if (!estadoId) {
-        const { data: ins, error } = await supabase
+        const { data: ins, error } = await (api as any)
           .from("estados")
           .insert({ sigla: uf, nome: estado.nome, geocodigo_ibge: String(estado.id) })
           .select("id").single();
@@ -42,7 +42,7 @@ export function ImportIBGETab() {
         estado_id: estadoId!,
         geocodigo_ibge: String(m.id),
       }));
-      const { error: upErr } = await supabase
+      const { error: upErr } = await (api as any)
         .from("municipios")
         .upsert(rows, { onConflict: "geocodigo_ibge", ignoreDuplicates: true });
       if (upErr) throw upErr;

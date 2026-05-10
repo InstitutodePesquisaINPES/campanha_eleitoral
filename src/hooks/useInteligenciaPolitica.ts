@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 
 // ============== TIPOS ==============
@@ -41,13 +41,8 @@ export function useMunicipiosEstrategicos(campanhaId?: string) {
     queryKey: ["municipios-estrategicos", campanhaId],
     enabled: !!campanhaId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("municipios_estrategicos")
-        .select("*, municipio:municipios(id, nome, populacao_2022, latitude, longitude)")
-        .eq("campanha_id", campanhaId!)
-        .order("score", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      const data = await api.get<any[]>(`/territorio/municipios/strategic?campanhaId=${campanhaId}`);
+      return data || [];
     },
   });
 }
@@ -56,12 +51,7 @@ export function useUpsertMunicipioEstrategico() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: any) => {
-      const { data, error } = await supabase
-        .from("municipios_estrategicos")
-        .upsert(payload, { onConflict: "campanha_id,municipio_id" })
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await api.post('/territorio/municipios/strategic', payload);
       return data;
     },
     onSuccess: (_d, vars: any) => {
@@ -76,8 +66,7 @@ export function useDeleteMunicipioEstrategico() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("municipios_estrategicos").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/territorio/municipios/strategic/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["municipios-estrategicos"] });
@@ -92,16 +81,10 @@ export function useBairrosEstrategicos(campanhaId?: string, municipioId?: string
     queryKey: ["bairros-estrategicos", campanhaId, municipioId],
     enabled: !!campanhaId,
     queryFn: async () => {
-      let q = supabase
-        .from("bairros_estrategicos")
-        .select("*, bairro:bairros(id, nome, municipio_id, latitude, longitude, zona_tipo, populacao_estimada)")
-        .eq("campanha_id", campanhaId!)
-        .order("score", { ascending: false });
-      const { data, error } = await q;
-      if (error) throw error;
-      let rows = data ?? [];
-      if (municipioId) rows = rows.filter((r: any) => r.bairro?.municipio_id === municipioId);
-      return rows;
+      let url = `/inteligencia/bairros-estrategicos?campanhaId=${campanhaId}`;
+      if (municipioId) url += `&municipioId=${municipioId}`;
+      const data = await api.get<any[]>(url);
+      return data || [];
     },
   });
 }
@@ -110,12 +93,7 @@ export function useUpsertBairroEstrategico() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: any) => {
-      const { data, error } = await supabase
-        .from("bairros_estrategicos")
-        .upsert(payload, { onConflict: "campanha_id,bairro_id" })
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await api.post('/inteligencia/bairros-estrategicos', payload);
       return data;
     },
     onSuccess: () => {
@@ -131,19 +109,15 @@ export function useLiderancas(filters?: { campanhaId?: string; municipioId?: str
   return useQuery({
     queryKey: ["liderancas", filters],
     queryFn: async () => {
-      let q = supabase
-        .from("liderancas_locais")
-        .select("*, municipio:municipios(nome), bairro:bairros(nome)")
-        .order("influencia_score", { ascending: false })
-        .limit(500);
-      if (filters?.campanhaId) q = q.eq("campanha_id", filters.campanhaId);
-      if (filters?.municipioId) q = q.eq("municipio_id", filters.municipioId);
-      if (filters?.classificacao) q = q.eq("classificacao", filters.classificacao);
-      if (filters?.status) q = q.eq("status", filters.status);
-      if (filters?.tipo) q = q.eq("tipo", filters.tipo);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      const params = new URLSearchParams();
+      if (filters?.campanhaId) params.append('campanhaId', filters.campanhaId);
+      if (filters?.municipioId) params.append('municipioId', filters.municipioId);
+      if (filters?.classificacao) params.append('classificacao', filters.classificacao);
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.tipo) params.append('tipo', filters.tipo);
+      
+      const data = await api.get<any[]>(`/inteligencia/liderancas?${params.toString()}`);
+      return data || [];
     },
   });
 }
@@ -152,23 +126,9 @@ export function useLiderancaStats(campanhaId?: string) {
   return useQuery({
     queryKey: ["liderancas-stats", campanhaId],
     queryFn: async () => {
-      let q = supabase.from("liderancas_locais").select("classificacao, status, tipo, votos_estimados");
-      if (campanhaId) q = q.eq("campanha_id", campanhaId);
-      const { data, error } = await q;
-      if (error) throw error;
-      const rows = data ?? [];
-      const total = rows.length;
-      const porClass: Record<string, number> = { A: 0, B: 0, C: 0, D: 0 };
-      const porStatus: Record<string, number> = {};
-      const porTipo: Record<string, number> = {};
-      let totalVotos = 0;
-      rows.forEach((r: any) => {
-        porClass[r.classificacao] = (porClass[r.classificacao] ?? 0) + 1;
-        porStatus[r.status] = (porStatus[r.status] ?? 0) + 1;
-        porTipo[r.tipo] = (porTipo[r.tipo] ?? 0) + 1;
-        totalVotos += r.votos_estimados ?? 0;
-      });
-      return { total, porClass, porStatus, porTipo, totalVotos };
+      const url = campanhaId ? `/inteligencia/liderancas/stats?campanhaId=${campanhaId}` : `/inteligencia/liderancas/stats`;
+      const data = await api.get<any>(url);
+      return data;
     },
   });
 }
@@ -178,13 +138,9 @@ export function useUpsertLideranca() {
   return useMutation({
     mutationFn: async (payload: any) => {
       if (payload.id) {
-        const { data, error } = await supabase.from("liderancas_locais").update(payload).eq("id", payload.id).select().single();
-        if (error) throw error;
-        return data;
+        return await api.put(`/inteligencia/liderancas/${payload.id}`, payload);
       } else {
-        const { data, error } = await supabase.from("liderancas_locais").insert(payload).select().single();
-        if (error) throw error;
-        return data;
+        return await api.post(`/inteligencia/liderancas`, payload);
       }
     },
     onSuccess: () => {
@@ -200,8 +156,7 @@ export function useDeleteLideranca() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("liderancas_locais").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/inteligencia/liderancas/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["liderancas"] });
@@ -216,19 +171,15 @@ export function useVereadoresHistoricos(filters?: { uf?: string; ano?: number; m
   return useQuery({
     queryKey: ["vereadores-historicos", filters],
     queryFn: async () => {
-      let q = supabase
-        .from("vereadores_historicos")
-        .select("*, municipio:municipios(nome)")
-        .order("votos_recebidos", { ascending: false })
-        .limit(1000);
-      if (filters?.uf) q = q.eq("uf", filters.uf);
-      if (filters?.ano) q = q.eq("ano", filters.ano);
-      if (filters?.municipioId) q = q.eq("municipio_id", filters.municipioId);
-      if (filters?.faixa) q = q.eq("faixa_votos", filters.faixa);
-      if (filters?.alinhamento) q = q.eq("alinhamento", filters.alinhamento);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      const params = new URLSearchParams();
+      if (filters?.uf) params.append('uf', filters.uf);
+      if (filters?.ano) params.append('ano', String(filters.ano));
+      if (filters?.municipioId) params.append('municipioId', filters.municipioId);
+      if (filters?.faixa) params.append('faixa', filters.faixa);
+      if (filters?.alinhamento) params.append('alinhamento', filters.alinhamento);
+      
+      const data = await api.get<any[]>(`/inteligencia/vereadores?${params.toString()}`);
+      return data || [];
     },
   });
 }
@@ -237,24 +188,8 @@ export function useVereadorStats(uf = "BA", ano = 2024) {
   return useQuery({
     queryKey: ["vereadores-stats", uf, ano],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vereadores_historicos")
-        .select("faixa_votos, alinhamento, eleito, votos_recebidos")
-        .eq("uf", uf)
-        .eq("ano", ano);
-      if (error) throw error;
-      const rows = data ?? [];
-      const porFaixa: Record<string, number> = {};
-      const porAlinhamento: Record<string, number> = {};
-      let totalVotos = 0;
-      let eleitos = 0;
-      rows.forEach((r: any) => {
-        porFaixa[r.faixa_votos] = (porFaixa[r.faixa_votos] ?? 0) + 1;
-        porAlinhamento[r.alinhamento ?? "desconhecido"] = (porAlinhamento[r.alinhamento ?? "desconhecido"] ?? 0) + 1;
-        totalVotos += r.votos_recebidos ?? 0;
-        if (r.eleito) eleitos++;
-      });
-      return { total: rows.length, porFaixa, porAlinhamento, totalVotos, eleitos };
+      const data = await api.get<any>(`/inteligencia/vereadores/stats?uf=${uf}&ano=${ano}`);
+      return data;
     },
   });
 }
@@ -263,12 +198,7 @@ export function usePopularVereadores() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ uf = "BA", ano = 2024, votosMin = 150 }: { uf?: string; ano?: number; votosMin?: number }) => {
-      const { data, error } = await supabase.rpc("popular_vereadores_historicos" as any, {
-        _uf: uf,
-        _ano: ano,
-        _votos_min: votosMin,
-      });
-      if (error) throw error;
+      const data = await api.post(`/inteligencia/vereadores/popular`, { uf, ano, votosMin });
       return data;
     },
     onSuccess: (count) => {
@@ -284,13 +214,7 @@ export function useUpdateVereador() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: any) => {
-      const { data, error } = await supabase
-        .from("vereadores_historicos")
-        .update(payload)
-        .eq("id", payload.id)
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await api.put(`/inteligencia/vereadores/${payload.id}`, payload);
       return data;
     },
     onSuccess: () => {

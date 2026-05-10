@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ export function ConfiguracaoPlano({ campanhaId }: { campanhaId: string }) {
   const { data: params } = useQuery({
     queryKey: ["campanha-parametros", campanhaId],
     queryFn: async () => {
-      const { data } = await supabase.from("campanha_parametros").select("*").eq("campanha_id", campanhaId).single();
+      const { data } = await (api as any).from("campanha_parametros").select("*").eq("campanha_id", campanhaId).single();
       return data;
     },
   });
@@ -24,7 +24,7 @@ export function ConfiguracaoPlano({ campanhaId }: { campanhaId: string }) {
 
   const save = useMutation({
     mutationFn: async (payload: any) => {
-      const { error } = await supabase.from("campanha_parametros").update(payload).eq("campanha_id", campanhaId);
+      const { error } = await (api as any).from("campanha_parametros").update(payload).eq("campanha_id", campanhaId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -36,7 +36,7 @@ export function ConfiguracaoPlano({ campanhaId }: { campanhaId: string }) {
 
   const gerar = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc("gerar_plano_90_dias" as any, { _campanha_id: campanhaId });
+      const { error } = await (api as any).rpc("gerar_plano_90_dias" as any, { _campanha_id: campanhaId });
       if (error) throw error;
     },
     onSuccess: () => {

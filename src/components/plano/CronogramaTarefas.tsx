@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { TarefaDetailDrawer } from "./TarefaDetailDrawer";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useCampanha } from "@/hooks/useCampanhas";
 import { RespaldoLegalPicker } from "./RespaldoLegalPicker";
 import { TarefaPreviewCard } from "./TarefaPreviewCard";
@@ -77,7 +77,7 @@ function useAnexosCount(campanhaId: string) {
   return useQuery({
     queryKey: ["tarefa-anexos-count", campanhaId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (api as any)
         .from("campanha_tarefa_anexos" as never)
         .select("tarefa_id")
         .eq("campanha_id", campanhaId);
@@ -275,7 +275,7 @@ function NovaTarefaDialog({
     if (subs.length > 0 && (created as { id?: string })?.id) {
       await Promise.all(
         subs.map((titulo, idx) =>
-          supabase.from("campanha_subtarefas" as never).insert({
+          (api as any).from("campanha_subtarefas" as never).insert({
             tarefa_id: (created as { id: string }).id,
             campanha_id: campanhaId,
             titulo,

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,9 +21,9 @@ export function TerritoriosAdminTab() {
     queryKey: ["territorio-counts"],
     queryFn: async () => {
       const [e, m, b] = await Promise.all([
-        supabase.from("estados").select("*", { count: "exact", head: true }),
-        supabase.from("municipios").select("*", { count: "exact", head: true }),
-        supabase.from("bairros").select("*", { count: "exact", head: true }),
+        (api as any).from("estados").select("*", { count: "exact", head: true }),
+        (api as any).from("municipios").select("*", { count: "exact", head: true }),
+        (api as any).from("bairros").select("*", { count: "exact", head: true }),
       ]);
       return { estados: e.count ?? 0, municipios: m.count ?? 0, bairros: b.count ?? 0 };
     },
@@ -36,12 +36,12 @@ export function TerritoriosAdminTab() {
       if (!estado) throw new Error("Estado não encontrado");
 
       // ensure estado exists in our DB
-      const { data: dbEstado } = await supabase
+      const { data: dbEstado } = await (api as any)
         .from("estados").select("id").eq("sigla", uf).maybeSingle();
 
       let estadoId = dbEstado?.id;
       if (!estadoId) {
-        const { data: ins, error } = await supabase
+        const { data: ins, error } = await (api as any)
           .from("estados")
           .insert({ sigla: uf, nome: estado.nome, geocodigo_ibge: String(estado.id) })
           .select("id").single();
@@ -54,7 +54,7 @@ export function TerritoriosAdminTab() {
         nome: m.nome, estado_id: estadoId!, geocodigo_ibge: String(m.id),
       }));
       // upsert by geocodigo_ibge
-      const { error: upErr } = await supabase.from("municipios").upsert(rows, { onConflict: "geocodigo_ibge", ignoreDuplicates: true });
+      const { error: upErr } = await (api as any).from("municipios").upsert(rows, { onConflict: "geocodigo_ibge", ignoreDuplicates: true });
       if (upErr) throw upErr;
       return rows.length;
     },

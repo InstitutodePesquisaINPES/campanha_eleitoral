@@ -12,11 +12,7 @@ import { WhatsappProvider } from './providers/whatsapp.provider';
     }),
   ],
   controllers: [ComunicacaoController],
-  providers: [
-    ComunicacaoService, 
-    ComunicacaoProcessor, 
-    WhatsappProvider
-  ],
+  providers: [ComunicacaoService, ComunicacaoProcessor, WhatsappProvider],
   exports: [ComunicacaoService],
 })
 export class ComunicacaoModule {}

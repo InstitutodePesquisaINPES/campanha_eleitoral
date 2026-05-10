@@ -1,19 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { api } from "@/lib/apiClient";
+
 import { toast } from "sonner";
 
-type Tables = Database["public"]["Tables"];
-type AIProviderRow = Tables["ai_provedores"]["Row"];
-type AIProviderInsert = Tables["ai_provedores"]["Insert"];
-type AIProviderUpdate = Tables["ai_provedores"]["Update"];
-type AIModelRow = Tables["ai_modelos"]["Row"];
-type AIModelInsert = Tables["ai_modelos"]["Insert"];
-type AIModelUpdate = Tables["ai_modelos"]["Update"];
-type AICopilotRow = Tables["ai_copilots"]["Row"];
-type AICopilotInsert = Tables["ai_copilots"]["Insert"];
-type AICopilotUpdate = Tables["ai_copilots"]["Update"];
-type AIUsageLogRow = Tables["ai_uso_log"]["Row"];
+type AIProviderRow = any;
+type AIProviderInsert = any;
+type AIProviderUpdate = any;
+type AIModelRow = any;
+type AIModelInsert = any;
+type AIModelUpdate = any;
+type AICopilotRow = any;
+type AICopilotInsert = any;
+type AICopilotUpdate = any;
+type AIUsageLogRow = any;
 
 type ProviderSummary = Pick<AIProviderRow, "nome" | "tipo" | "status">;
 type ProviderName = Pick<AIProviderRow, "nome">;
@@ -71,9 +70,8 @@ export function useAIProvedores() {
   return useQuery({
     queryKey: ["ai_provedores"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("ai_provedores").select("*").order("prioridade");
-      if (error) throw error;
-      return (data ?? []) as AIProviderRow[];
+      const data = await api.get<AIProviderRow[]>("/ai/provedores");
+      return data || [];
     },
   });
 }
@@ -82,11 +80,9 @@ export function useAIModelos(provedorId?: string) {
   return useQuery({
     queryKey: ["ai_modelos", provedorId],
     queryFn: async () => {
-      let q = supabase.from("ai_modelos").select("*, ai_provedores(nome, tipo, status)").order("nome");
-      if (provedorId) q = q.eq("provedor_id", provedorId);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as AIModelWithProvider[];
+      const url = provedorId ? `/ai/modelos?provedorId=${provedorId}` : "/ai/modelos";
+      const data = await api.get<AIModelWithProvider[]>(url);
+      return data || [];
     },
   });
 }
@@ -95,9 +91,8 @@ export function useAICopilots() {
   return useQuery({
     queryKey: ["ai_copilots"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("ai_copilots").select("*, ai_modelos(nome, modelo_id, ai_provedores(nome))").order("ordem");
-      if (error) throw error;
-      return (data ?? []) as AICopilotWithModel[];
+      const data = await api.get<AICopilotWithModel[]>("/ai/copilots");
+      return data || [];
     },
   });
 }
@@ -106,10 +101,11 @@ export function useUpsertProvedor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (p: AIProviderMutationPayload) => {
-      const { error } = "id" in p && p.id
-        ? await supabase.from("ai_provedores").update(p as AIProviderUpdate).eq("id", p.id)
-        : await supabase.from("ai_provedores").insert(p as AIProviderInsert);
-      if (error) throw error;
+      const { id, ...dataToSave } = p;
+      if (id) {
+        return await api.put(`/ai/provedores/${id}`, dataToSave);
+      }
+      return await api.post("/ai/provedores", dataToSave);
     },
     onSuccess: () => { toast.success("Provedor salvo"); qc.invalidateQueries({ queryKey: ["ai_provedores"] }); },
     onError: (error: unknown) => toast.error(getErrorMessage(error)),
@@ -120,8 +116,7 @@ export function useDeleteProvedor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("ai_provedores").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/ai/provedores/${id}`);
     },
     onSuccess: () => { toast.success("Provedor removido"); qc.invalidateQueries({ queryKey: ["ai_provedores"] }); },
     onError: (error: unknown) => toast.error(getErrorMessage(error)),
@@ -132,8 +127,7 @@ export function useTestProvedor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (provedor_id: string) => {
-      const { data, error } = await supabase.functions.invoke("ai-test-provider", { body: { provedor_id } });
-      if (error) throw error;
+      const data = await api.post("/ai/provedores/test", { provedor_id });
       return data;
     },
     onSuccess: (data: { ok?: boolean; error?: string } | null) => {
@@ -149,10 +143,11 @@ export function useUpsertModelo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (m: AIModelMutationPayload) => {
-      const { error } = "id" in m && m.id
-        ? await supabase.from("ai_modelos").update(m as AIModelUpdate).eq("id", m.id)
-        : await supabase.from("ai_modelos").insert(m as AIModelInsert);
-      if (error) throw error;
+      const { id, ...dataToSave } = m;
+      if (id) {
+        return await api.put(`/ai/modelos/${id}`, dataToSave);
+      }
+      return await api.post("/ai/modelos", dataToSave);
     },
     onSuccess: () => { toast.success("Modelo salvo"); qc.invalidateQueries({ queryKey: ["ai_modelos"] }); },
     onError: (error: unknown) => toast.error(getErrorMessage(error)),
@@ -163,8 +158,7 @@ export function useDeleteModelo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("ai_modelos").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/ai/modelos/${id}`);
     },
     onSuccess: () => { toast.success("Modelo removido"); qc.invalidateQueries({ queryKey: ["ai_modelos"] }); },
     onError: (error: unknown) => toast.error(getErrorMessage(error)),
@@ -175,10 +169,11 @@ export function useUpsertCopilot() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (c: AICopilotMutationPayload) => {
-      const { error } = "id" in c && c.id
-        ? await supabase.from("ai_copilots").update(c as AICopilotUpdate).eq("id", c.id)
-        : await supabase.from("ai_copilots").insert(c as AICopilotInsert);
-      if (error) throw error;
+      const { id, ...dataToSave } = c;
+      if (id) {
+        return await api.put(`/ai/copilots/${id}`, dataToSave);
+      }
+      return await api.post("/ai/copilots", dataToSave);
     },
     onSuccess: () => { toast.success("Copilot salvo"); qc.invalidateQueries({ queryKey: ["ai_copilots"] }); },
     onError: (error: unknown) => toast.error(getErrorMessage(error)),
@@ -188,12 +183,8 @@ export function useUpsertCopilot() {
 export function useAIChat() {
   return useMutation({
     mutationFn: async (payload: AIChatPayload) => {
-      const { data, error } = await supabase.functions.invoke("ai-chat-proxy", { body: payload });
-      if (error) throw error;
-      const response = data as AIChatResponse | null;
-      if (response?.error) throw new Error(response.error);
-      if (!response) throw new Error("Resposta vazia do provedor");
-      return response;
+      const data = await api.post<AIChatResponse>("/ai/chat", payload);
+      return data;
     },
   });
 }
@@ -202,13 +193,8 @@ export function useAIUsoLog(limit = 50) {
   return useQuery({
     queryKey: ["ai_uso_log", limit],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_uso_log")
-        .select("*, ai_provedores(nome), ai_modelos(nome), ai_copilots(nome)")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      return (data ?? []) as AIUsageLogWithRelations[];
+      const data = await api.get<AIUsageLogWithRelations[]>(`/ai/log?limit=${limit}`);
+      return data || [];
     },
   });
 }

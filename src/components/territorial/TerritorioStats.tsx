@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Building2, Home, Vote, Users, Map } from "lucide-react";
 
@@ -8,12 +8,12 @@ export function TerritorioStats() {
     queryKey: ["territorio-stats"],
     queryFn: async () => {
       const [e, m, b, z, s, a] = await Promise.all([
-        supabase.from("estados").select("*", { count: "exact", head: true }),
-        supabase.from("municipios").select("*", { count: "exact", head: true }),
-        supabase.from("bairros").select("*", { count: "exact", head: true }),
-        supabase.from("zonas_eleitorais").select("*", { count: "exact", head: true }),
-        supabase.from("secoes_eleitorais").select("*", { count: "exact", head: true }),
-        supabase.from("areas_atuacao").select("*", { count: "exact", head: true }),
+        (api as any).from("estados").select("*", { count: "exact", head: true }),
+        (api as any).from("municipios").select("*", { count: "exact", head: true }),
+        (api as any).from("bairros").select("*", { count: "exact", head: true }),
+        (api as any).from("zonas_eleitorais").select("*", { count: "exact", head: true }),
+        (api as any).from("secoes_eleitorais").select("*", { count: "exact", head: true }),
+        (api as any).from("areas_atuacao").select("*", { count: "exact", head: true }),
       ]);
       return {
         estados: e.count ?? 0,

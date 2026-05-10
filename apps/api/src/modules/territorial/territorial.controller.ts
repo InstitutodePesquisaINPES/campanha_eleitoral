@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { TerritorialService } from './territorial.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
@@ -8,55 +18,95 @@ export class TerritorialController {
   constructor(private readonly territorialService: TerritorialService) {}
 
   @Get('estados')
-  getEstados() { return this.territorialService.getEstados(); }
+  getEstados() {
+    return this.territorialService.getEstados();
+  }
 
   // ---- MUNICIPIOS ----
   @Get('municipios')
-  getMunicipios(@Query('estadoId') estadoId?: string) { return this.territorialService.getMunicipios(estadoId); }
+  getMunicipios(@Query('estadoId') estadoId?: string) {
+    return this.territorialService.getMunicipios(estadoId);
+  }
   @Post('municipios')
-  createMunicipio(@Body() data: any) { return this.territorialService.createMunicipio(data); }
+  createMunicipio(@Body() data: any) {
+    return this.territorialService.createMunicipio(data);
+  }
   @Patch('municipios/:id')
-  updateMunicipio(@Param('id') id: string, @Body() data: any) { return this.territorialService.updateMunicipio(id, data); }
+  updateMunicipio(@Param('id') id: string, @Body() data: any) {
+    return this.territorialService.updateMunicipio(id, data);
+  }
   @Delete('municipios/:id')
-  deleteMunicipio(@Param('id') id: string) { return this.territorialService.deleteMunicipio(id); }
+  deleteMunicipio(@Param('id') id: string) {
+    return this.territorialService.deleteMunicipio(id);
+  }
 
   // ---- BAIRROS ----
   @Get('bairros')
-  getBairros(@Query('municipioId') municipioId?: string) { return this.territorialService.getBairros(municipioId); }
+  getBairros(@Query('municipioId') municipioId?: string) {
+    return this.territorialService.getBairros(municipioId);
+  }
   @Post('bairros')
-  createBairro(@Body() data: any) { return this.territorialService.createBairro(data); }
+  createBairro(@Body() data: any) {
+    return this.territorialService.createBairro(data);
+  }
   @Patch('bairros/:id')
-  updateBairro(@Param('id') id: string, @Body() data: any) { return this.territorialService.updateBairro(id, data); }
+  updateBairro(@Param('id') id: string, @Body() data: any) {
+    return this.territorialService.updateBairro(id, data);
+  }
   @Delete('bairros/:id')
-  deleteBairro(@Param('id') id: string) { return this.territorialService.deleteBairro(id); }
+  deleteBairro(@Param('id') id: string) {
+    return this.territorialService.deleteBairro(id);
+  }
 
   // ---- ZONAS ----
   @Get('zonas')
-  getZonas(@Query('municipioId') municipioId?: string) { return this.territorialService.getZonasEleitorais(municipioId); }
+  getZonas(@Query('municipioId') municipioId?: string) {
+    return this.territorialService.getZonasEleitorais(municipioId);
+  }
   @Post('zonas')
-  createZona(@Body() data: any) { return this.territorialService.createZona(data); }
+  createZona(@Body() data: any) {
+    return this.territorialService.createZona(data);
+  }
   @Delete('zonas/:id')
-  deleteZona(@Param('id') id: string) { return this.territorialService.deleteZona(id); }
+  deleteZona(@Param('id') id: string) {
+    return this.territorialService.deleteZona(id);
+  }
 
   // ---- SECOES ----
   @Get('secoes')
-  getSecoes(@Query('zonaId') zonaId?: string) { return this.territorialService.getSecoesEleitorais(zonaId); }
+  getSecoes(@Query('zonaId') zonaId?: string) {
+    return this.territorialService.getSecoesEleitorais(zonaId);
+  }
   @Post('secoes')
-  createSecao(@Body() data: any) { return this.territorialService.createSecao(data); }
+  createSecao(@Body() data: any) {
+    return this.territorialService.createSecao(data);
+  }
   @Delete('secoes/:id')
-  deleteSecao(@Param('id') id: string) { return this.territorialService.deleteSecao(id); }
+  deleteSecao(@Param('id') id: string) {
+    return this.territorialService.deleteSecao(id);
+  }
 
   // ---- DISTRITOS & COMUNIDADES ----
   @Get('distritos')
-  getDistritos(@Query('municipioId') municipioId?: string) { return this.territorialService.getDistritos(municipioId); }
+  getDistritos(@Query('municipioId') municipioId?: string) {
+    return this.territorialService.getDistritos(municipioId);
+  }
   @Get('comunidades')
-  getComunidades(@Query('bairroId') bairroId?: string) { return this.territorialService.getComunidades(bairroId); }
+  getComunidades(@Query('bairroId') bairroId?: string) {
+    return this.territorialService.getComunidades(bairroId);
+  }
 
   // ---- AREAS DE ATUACAO ----
   @Get('areas-atuacao')
-  getAreasAtuacao(@Query('municipioId') municipioId?: string) { return this.territorialService.getAreasAtuacao(municipioId); }
+  getAreasAtuacao(@Query('municipioId') municipioId?: string) {
+    return this.territorialService.getAreasAtuacao(municipioId);
+  }
   @Post('areas-atuacao')
-  createAreaAtuacao(@Body() data: any) { return this.territorialService.createAreaAtuacao(data); }
+  createAreaAtuacao(@Body() data: any) {
+    return this.territorialService.createAreaAtuacao(data);
+  }
   @Delete('areas-atuacao/:id')
-  deleteAreaAtuacao(@Param('id') id: string) { return this.territorialService.deleteAreaAtuacao(id); }
+  deleteAreaAtuacao(@Param('id') id: string) {
+    return this.territorialService.deleteAreaAtuacao(id);
+  }
 }

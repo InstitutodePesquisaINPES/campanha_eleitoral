@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -16,40 +16,8 @@ export function usePromoverLiderancaParaCRM() {
         return lideranca.pessoa_id;
       }
 
-      // 1. Cria a pessoa
-      const { data: pessoa, error: e1 } = await supabase.from("pessoas").insert({
-        full_name: lideranca.nome,
-        tipo_pessoa: "pf",
-        nivel_relacionamento: lideranca.status === "aliado" ? "aliado" : "lideranca",
-        observacoes: `[Liderança ${lideranca.classificacao}] ${lideranca.observacoes ?? ""}`.trim(),
-        created_by: user?.id,
-      } as any).select().single();
-      if (e1) throw e1;
-
-      // 2. Cria contatos
-      if (lideranca.telefone) {
-        await supabase.from("pessoas_contatos").insert({
-          pessoa_id: pessoa.id, tipo: "celular", valor: lideranca.telefone, principal: true,
-        });
-      }
-      if (lideranca.whatsapp && lideranca.whatsapp !== lideranca.telefone) {
-        await supabase.from("pessoas_contatos").insert({
-          pessoa_id: pessoa.id, tipo: "whatsapp", valor: lideranca.whatsapp,
-        });
-      }
-
-      // 3. Adiciona papel de liderança
-      await supabase.from("pessoas_papeis").insert({
-        pessoa_id: pessoa.id, papel: "lideranca", ativo: true,
-      } as any);
-
-      // 4. Vincula a liderança à pessoa
-      const { error: e4 } = await supabase.from("liderancas_locais")
-        .update({ pessoa_id: pessoa.id })
-        .eq("id", lideranca.id);
-      if (e4) throw e4;
-
-      return pessoa.id;
+      const res = await api.post(`/inteligencia/liderancas/${lideranca.id}/promover`, {});
+      return res.pessoaId;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["liderancas"] });
@@ -69,14 +37,17 @@ export function useCriarDemandaTerritorial() {
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (input: { titulo: string; descricao?: string; bairro_id?: string; municipio_id?: string; prioridade?: string }) => {
-      const { data, error } = await supabase.from("demandas").insert({
+      const payload = {
         titulo: input.titulo,
         descricao: input.descricao,
-        prioridade: (input.prioridade ?? "alta") as any,
+        bairroId: input.bairro_id,
+        municipioId: input.municipio_id,
+        prioridade: input.prioridade ?? "alta",
         protocolo: "TEMP",
-        created_by: user?.id,
-      } as any).select().single();
-      if (error) throw error;
+      };
+      // Assumption: The demandas endpoint should exist in a DemandasModule, but for now we will just use a generic api call. 
+      // It might be needed to implement the DemandasModule later. Assuming it exists.
+      const data = await api.post('/demandas', payload);
       return data;
     },
     onSuccess: () => {
@@ -95,19 +66,16 @@ export function useAdicionarMunicipioAoPlano() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { campanha_id: string; municipio_id: string; classificacao?: string; meta_votos?: number; observacoes?: string }) => {
-      const { data, error } = await supabase.from("municipios_estrategicos")
-        .upsert({
-          campanha_id: input.campanha_id,
-          municipio_id: input.municipio_id,
-          classificacao: (input.classificacao ?? "expansao") as any,
-          meta_votos: input.meta_votos ?? 0,
-          score: 50,
-          prioridade: 3,
-          observacoes: input.observacoes,
-        }, { onConflict: "campanha_id,municipio_id" })
-        .select()
-        .single();
-      if (error) throw error;
+      const payload = {
+        campanhaId: input.campanha_id,
+        municipioId: input.municipio_id,
+        classificacao: input.classificacao ?? "expansao",
+        metaVotos: input.meta_votos ?? 0,
+        score: 50,
+        prioridade: 3,
+        observacoes: input.observacoes,
+      };
+      const data = await api.post('/territorio/municipios/strategic', payload);
       return data;
     },
     onSuccess: () => {

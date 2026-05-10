@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 export type ExportFormat = "png" | "pdf";
 
@@ -107,10 +107,10 @@ export function useExportBI() {
 
         // Upload opcional
         if (opts.upload) {
-          const { data: { user } } = await supabase.auth.getUser();
+          const { data: { user } } = await (api as any).auth.getUser();
           if (user) {
             const path = `${user.id}/${filename}.${ext}`;
-            const { error: upErr } = await supabase.storage
+            const { error: upErr } = await (api as any).storage
               .from("relatorios-bi")
               .upload(path, blob, { contentType: mime, upsert: true });
             if (upErr) {
@@ -120,7 +120,7 @@ export function useExportBI() {
                 toast.error(`Upload falhou: ${upErr.message}`);
               }
             } else {
-              const { data: signed } = await supabase.storage
+              const { data: signed } = await (api as any).storage
                 .from("relatorios-bi")
                 .createSignedUrl(path, 60 * 60 * 24 * 7);
               if (signed?.signedUrl) {

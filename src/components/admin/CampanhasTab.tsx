@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,11 +40,7 @@ export function CampanhasTab() {
   const { data: campanhas = [], isLoading } = useQuery({
     queryKey: ["admin-campanhas"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanhas")
-        .select("*, estados(sigla), municipios(nome)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      const data = await api.get<any[]>('/campanhas');
       return data;
     },
   });
@@ -68,10 +64,9 @@ export function CampanhasTab() {
         municipio_id: form.municipio_id || null,
         municipios_foco_ids: form.municipios_foco_ids,
       };
-      const { data, error } = await supabase.from("campanhas").insert(payload).select().single();
-      if (error) throw error;
-      const { error: rpcErr } = await supabase.rpc("gerar_plano_90_dias" as never, { _campanha_id: data.id } as never);
-      if (rpcErr) throw rpcErr;
+      
+      const data = await api.post<any>('/campanhas', payload);
+      await api.post(`/campanhas/${data.id}/gerar-plano`, {});
       return data;
     },
     onSuccess: () => {
@@ -86,8 +81,7 @@ export function CampanhasTab() {
 
   const toggleAtiva = useMutation({
     mutationFn: async ({ id, ativa }: { id: string; ativa: boolean }) => {
-      const { error } = await supabase.from("campanhas").update({ ativa }).eq("id", id);
-      if (error) throw error;
+      return api.put(`/campanhas/${id}`, { ativa });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-campanhas"] }),
     onError: (e: Error) => toast.error(e.message),
@@ -95,8 +89,7 @@ export function CampanhasTab() {
 
   const regerar = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc("gerar_plano_90_dias" as never, { _campanha_id: id } as never);
-      if (error) throw error;
+      return api.post(`/campanhas/${id}/gerar-plano`, {});
     },
     onSuccess: () => toast.success("Plano 90 dias regenerado"),
     onError: (e: Error) => toast.error(e.message),
@@ -104,8 +97,7 @@ export function CampanhasTab() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("campanhas").delete().eq("id", id);
-      if (error) throw error;
+      return api.delete(`/campanhas/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-campanhas"] });

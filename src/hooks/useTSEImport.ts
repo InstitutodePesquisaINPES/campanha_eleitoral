@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 export type TseJobStatus = "queued" | "running" | "done" | "failed" | "cancelled";
 export type TseJobTipo = "eleitorado" | "locais" | "candidatos" | "resultados" | "prestacao_contas";
@@ -24,7 +24,7 @@ export function useTSEJobs() {
   return useQuery({
     queryKey: ["tse-jobs"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (api as any)
         .from("tse_import_jobs")
         .select("*")
         .order("created_at", { ascending: false })
@@ -41,7 +41,7 @@ export function useTSEJobLogs(jobId?: string) {
     queryKey: ["tse-job-logs", jobId],
     queryFn: async () => {
       if (!jobId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (api as any)
         .from("tse_import_logs")
         .select("*")
         .eq("job_id", jobId)
@@ -62,7 +62,7 @@ export function useTSEStats() {
       // RPC consolidada: soma real de eleitores e candidatos únicos,
       // unificando tabelas agregadas (tse_eleitorado/tse_candidatos)
       // e detalhadas (tse_eleitorado_perfil/tse_votacao_candidato_perfil).
-      const { data, error } = await supabase.rpc("tse_estatisticas_globais" as any);
+      const { data, error } = await (api as any).rpc("tse_estatisticas_globais" as any);
       if (error) throw error;
       const row: any = Array.isArray(data) ? data[0] : data;
       return {
@@ -81,7 +81,7 @@ export function useEnqueueTSE() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { uf: string; anos: number[]; tipos: TseJobTipo[] }) => {
-      const { data, error } = await supabase.functions.invoke("tse-import-enqueue", { body: vars });
+      const { data, error } = await (api as any).functions.invoke("tse-import-enqueue", { body: vars });
       if (error) throw error;
       return data;
     },
@@ -95,7 +95,7 @@ export function useRunWorker() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("tse-import-worker", { body: {} });
+      const { data, error } = await (api as any).functions.invoke("tse-import-worker", { body: {} });
       if (error) throw error;
       return data;
     },
@@ -107,7 +107,7 @@ export function useCancelTSEJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (api as any)
         .from("tse_import_jobs")
         .update({ status: "cancelled", finished_at: new Date().toISOString() })
         .eq("id", id)

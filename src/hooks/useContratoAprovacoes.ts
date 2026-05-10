@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 
 export type AprovacaoStatus = "pendente" | "aprovado" | "rejeitado" | "revisao";
@@ -37,13 +37,15 @@ export function useContratoAprovacoes(contratoId?: string) {
     queryKey: ["contrato-aprovacoes", contratoId],
     enabled: !!contratoId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("contrato_aprovacoes")
-        .select("*")
-        .eq("contrato_id", contratoId)
-        .order("ordem");
-      if (error) throw error;
-      return (data || []) as ContratoAprovacao[];
+      const data = await api.get<any[]>(`/contratos/aprovacoes?contratoId=${contratoId}`);
+      return (data || []).map(a => ({
+        ...a,
+        contrato_id: a.contratoId,
+        aprovador_id: a.aprovadorId,
+        exige_observacao: a.exigeObservacao,
+        decidido_em: a.decididoEm,
+        created_at: a.createdAt,
+      })) as ContratoAprovacao[];
     },
   });
 }
@@ -52,11 +54,7 @@ export function useMinhasAprovacoesPendentes() {
   return useQuery({
     queryKey: ["minhas-aprovacoes-pendentes"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("v_minhas_aprovacoes_pendentes")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      const data = await api.get<any[]>('/contratos/minhas-aprovacoes');
       return data as Array<{
         id: string;
         contrato_id: string;
@@ -77,11 +75,10 @@ export function useDecidirAprovacao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; status: AprovacaoStatus; observacao?: string }) => {
-      const { error } = await (supabase as any)
-        .from("contrato_aprovacoes")
-        .update({ status: input.status, observacao: input.observacao || null })
-        .eq("id", input.id);
-      if (error) throw error;
+      await api.put(`/contratos/aprovacoes/${input.id}/decidir`, {
+        status: input.status,
+        observacao: input.observacao || null,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contrato-aprovacoes"] });
@@ -97,8 +94,7 @@ export function useRecriarAprovacoes() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (contratoId: string) => {
-      const { error } = await (supabase as any).rpc("criar_aprovacoes_contrato", { _contrato_id: contratoId });
-      if (error) throw error;
+      await api.post(`/contratos/${contratoId}/recriar-aprovacoes`, {});
     },
     onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: ["contrato-aprovacoes", id] });

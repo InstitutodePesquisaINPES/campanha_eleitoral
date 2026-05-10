@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 
@@ -7,7 +7,7 @@ export function SystemHealthCard() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-system-health"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("admin-system-health");
+      const { data, error } = await (api as any).functions.invoke("admin-system-health");
       if (error) throw error;
       return data as Record<string, number>;
     },

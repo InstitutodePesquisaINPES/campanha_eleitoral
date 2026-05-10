@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useEstados, useMunicipios, useBairros, useCreateBairro } from "@/hooks/useTerritorio";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,28 +36,14 @@ export function ImportBairrosTab() {
 
     setLoading(true);
     try {
-      // dedup contra existentes (case-insensitive)
-      const { data: existentes } = await supabase
-        .from("bairros")
-        .select("nome")
-        .eq("municipio_id", municipioId);
-      const set = new Set((existentes || []).map((b: any) => b.nome.toLowerCase()));
-      const novos = Array.from(new Set(linhas))
-        .filter((n) => !set.has(n.toLowerCase()))
-        .map((nome) => ({ nome, municipio_id: municipioId }));
-
-      if (novos.length === 0) {
-        toast({ title: "Nada a importar", description: "Todos os bairros já existem." });
-        setLoading(false);
-        return;
-      }
-
-      const { error } = await supabase.from("bairros").insert(novos);
-      if (error) throw error;
+      const res = await api.post('/territorio/bairros/import', {
+        municipioId,
+        nomes: linhas
+      });
 
       qc.invalidateQueries({ queryKey: ["bairros"] });
       qc.invalidateQueries({ queryKey: ["territorio-stats"] });
-      toast({ title: `${novos.length} bairros importados!`, description: `${linhas.length - novos.length} já existiam` });
+      toast({ title: `${res.count} bairros importados!`, description: "Processado com sucesso." });
       setTexto("");
     } catch (e: any) {
       toast({ variant: "destructive", title: "Erro", description: e.message });

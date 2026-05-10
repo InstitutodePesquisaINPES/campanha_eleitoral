@@ -2,40 +2,21 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { Navigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useSystemSettings, useUpdateSystemSetting } from "@/hooks/useSystemSettings";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Settings, Brush, Trophy, Building } from "lucide-react";
 import { ThemePanel } from "@/components/ui/ThemePanel";
 
 export default function SettingsPage() {
   const { data: roles = [], isLoading: rolesLoading } = useUserRoles();
   const isAdmin = roles.includes("admin");
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: settings = [], isLoading } = useQuery({
-    queryKey: ["system-settings"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("system_settings").select("*");
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const getSetting = (key: string, defaultValue: string = "") => {
-    const s = settings.find((s: any) => s.key === key);
-    if (!s) return defaultValue;
-    const val = s.value;
-    return typeof val === "string" ? val.replace(/^"|"$/g, "") : String(val);
-  };
+  const { data: settingsMap = {}, isLoading } = useSystemSettings();
+  const updateSettings = useUpdateSystemSetting();
 
   // Eleição
   const [tipo, setTipo] = useState("");
@@ -52,53 +33,32 @@ export default function SettingsPage() {
   const [pontosPorEleitor, setPontosPorEleitor] = useState("");
 
   useEffect(() => {
-    if (settings.length > 0) {
-      setTipo(getSetting("eleicao_tipo"));
-      setAno(getSetting("eleicao_ano"));
-      setTurno(getSetting("eleicao_turno"));
-      setUf(getSetting("eleicao_uf"));
+    if (Object.keys(settingsMap).length >= 0 && !isLoading) {
+      setTipo(settingsMap["eleicao_tipo"] || "");
+      setAno(settingsMap["eleicao_ano"] || "");
+      setTurno(settingsMap["eleicao_turno"] || "");
+      setUf(settingsMap["eleicao_uf"] || "");
       
-      setBrandName(getSetting("brand_name", "KIRIBAMBA"));
-      setBrandNumber(getSetting("brand_number", "70"));
-      setBrandSubtitle(getSetting("brand_subtitle", "Avante · Dep. Federal"));
+      setBrandName(settingsMap["brand_name"] || "KIRIBAMBA");
+      setBrandNumber(settingsMap["brand_number"] || "70");
+      setBrandSubtitle(settingsMap["brand_subtitle"] || "Avante · Dep. Federal");
       
-      setPontosPorEleitor(getSetting("gamificacao_pontos_base", "10"));
+      setPontosPorEleitor(settingsMap["gamificacao_pontos_base"] || "10");
     }
-  }, [settings]);
+  }, [settingsMap, isLoading]);
 
-  const upsertSetting = async (key: string, value: string) => {
-    // Check if exists
-    const exists = settings.find((s: any) => s.key === key);
-    if (exists) {
-      await supabase.from("system_settings").update({ value: JSON.stringify(value), updated_by: user?.id }).eq("key", key);
-    } else {
-      await supabase.from("system_settings").insert({ key, value: JSON.stringify(value), updated_by: user?.id });
-    }
+  const handleSave = () => {
+    updateSettings.mutate({
+      eleicao_tipo: tipo,
+      eleicao_ano: ano,
+      eleicao_turno: turno,
+      eleicao_uf: uf,
+      brand_name: brandName,
+      brand_number: brandNumber,
+      brand_subtitle: brandSubtitle,
+      gamificacao_pontos_base: pontosPorEleitor,
+    });
   };
-
-  const updateSettingMutation = useMutation({
-    mutationFn: async () => {
-      await Promise.all([
-        upsertSetting("eleicao_tipo", tipo),
-        upsertSetting("eleicao_ano", ano),
-        upsertSetting("eleicao_turno", turno),
-        upsertSetting("eleicao_uf", uf),
-        
-        upsertSetting("brand_name", brandName),
-        upsertSetting("brand_number", brandNumber),
-        upsertSetting("brand_subtitle", brandSubtitle),
-        
-        upsertSetting("gamificacao_pontos_base", pontosPorEleitor),
-      ]);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["system-settings"] });
-      toast({ title: "Configurações salvas e aplicadas em tempo real!" });
-    },
-    onError: () => {
-      toast({ variant: "destructive", title: "Erro ao salvar" });
-    }
-  });
 
   if (rolesLoading) return null;
   if (!isAdmin) return <Navigate to="/" replace />;
@@ -211,8 +171,8 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button size="lg" className="px-12 font-bold shadow-md hover:shadow-lg transition-all" onClick={() => updateSettingMutation.mutate()} disabled={updateSettingMutation.isPending}>
-            {updateSettingMutation.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+          <Button size="lg" className="px-12 font-bold shadow-md hover:shadow-lg transition-all" onClick={handleSave} disabled={updateSettings.isPending}>
+            {updateSettings.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
             Salvar e Aplicar
           </Button>
         </div>

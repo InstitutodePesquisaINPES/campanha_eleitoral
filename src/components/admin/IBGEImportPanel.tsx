@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Database, MapPin, Loader2, CheckCircle2, XCircle, Clock, AlertCircle, Search } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useQuery } from "@tanstack/react-query";
 
 const statusVariant: Record<string, any> = {
@@ -22,7 +22,7 @@ function useMunicipiosSearch(q: string) {
     queryKey: ["mun-search", q],
     enabled: q.trim().length >= 2,
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data } = await ((api as any) as any)
         .from("municipios")
         .select("id, nome, geocodigo_ibge")
         .ilike("nome", `%${q.trim()}%`)

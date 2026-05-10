@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ApiClient } from '../services/api';
+import { api } from '@/lib/apiClient';
 
 export const useStrategy = () => {
   const queryClient = useQueryClient();
@@ -7,7 +7,7 @@ export const useStrategy = () => {
   const campanhasQuery = useQuery({
     queryKey: ['campanhas-estrategia'],
     queryFn: async () => {
-      const res = await ApiClient.get('/strategy/campanhas');
+      const res = await api.get('/strategy/campanhas');
       return res.data;
     },
   });
@@ -15,7 +15,7 @@ export const useStrategy = () => {
   const warRoomStatsQuery = (campanhaId: string) => useQuery({
     queryKey: ['war-room-stats', campanhaId],
     queryFn: async () => {
-      const res = await ApiClient.get(`/strategy/war-room/${campanhaId}`);
+      const res = await api.get(`/strategy/war-room/${campanhaId}`);
       return res.data;
     },
     enabled: !!campanhaId,
@@ -23,7 +23,7 @@ export const useStrategy = () => {
 
   const createCampanhaMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await ApiClient.post('/strategy/campanhas', data);
+      const res = await api.post('/strategy/campanhas', data);
       return res.data;
     },
     onSuccess: () => {
@@ -33,7 +33,7 @@ export const useStrategy = () => {
 
   const createEixoMutation = useMutation({
     mutationFn: async ({ campanhaId, data }: { campanhaId: string; data: any }) => {
-      const res = await ApiClient.post(`/strategy/campanhas/${campanhaId}/eixos`, data);
+      const res = await api.post(`/strategy/campanhas/${campanhaId}/eixos`, data);
       return res.data;
     },
     onSuccess: () => {
@@ -43,7 +43,7 @@ export const useStrategy = () => {
 
   const createParceriaMutation = useMutation({
     mutationFn: async ({ campanhaId, data }: { campanhaId: string; data: any }) => {
-      const res = await ApiClient.post(`/strategy/campanhas/${campanhaId}/parcerias`, data);
+      const res = await api.post(`/strategy/campanhas/${campanhaId}/parcerias`, data);
       return res.data;
     },
     onSuccess: () => {

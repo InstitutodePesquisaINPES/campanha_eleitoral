@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,16 +18,14 @@ export function TagsTab() {
   const { data: tags = [], isLoading } = useQuery({
     queryKey: ["admin-tags"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("tags").select("*").order("nome");
-      if (error) throw error;
+      const data = await api.get<any[]>('/admin/tags');
       return data || [];
     },
   });
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("tags").insert({ nome, categoria: categoria || null, cor });
-      if (error) throw error;
+      await api.post('/admin/tags', { nome, categoria: categoria || null, cor });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-tags"] });
@@ -39,8 +37,7 @@ export function TagsTab() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("tags").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/admin/tags/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-tags"] });

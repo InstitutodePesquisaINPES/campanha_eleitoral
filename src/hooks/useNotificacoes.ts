@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export type Notificacao = {
   id: string;
@@ -26,40 +26,23 @@ export function useNotificacoes() {
     queryKey: ["notificacoes", user?.id],
     queryFn: async () => {
       if (!user) return [] as Notificacao[];
-      const { data, error } = await supabase
-        .from("notificacoes")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return (data || []) as Notificacao[];
+      const data = await api.get<any[]>('/notificacoes');
+      return (data || []).map(n => ({
+        ...n,
+        user_id: n.userId,
+        entidade_tipo: n.entidadeTipo,
+        entidade_id: n.entidadeId,
+        lida_em: n.lidaEm,
+        created_at: n.createdAt,
+      })) as Notificacao[];
     },
     enabled: !!user,
+    refetchInterval: 15000, // Long-polling in substitition to Supabase Realtime
   });
-
-  // Realtime subscription
-  useEffect(() => {
-    if (!user) return;
-    const ch = supabase
-      .channel(`notif-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notificacoes", filter: `user_id=eq.${user.id}` },
-        () => qc.invalidateQueries({ queryKey: ["notificacoes", user.id] }),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [user, qc]);
 
   const marcarLida = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("notificacoes")
-        .update({ lida: true, lida_em: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
+      await api.put(`/notificacoes/${id}/lida`, {});
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notificacoes", user?.id] }),
   });
@@ -67,20 +50,14 @@ export function useNotificacoes() {
   const marcarTodasLidas = useMutation({
     mutationFn: async () => {
       if (!user) return;
-      const { error } = await supabase
-        .from("notificacoes")
-        .update({ lida: true, lida_em: new Date().toISOString() })
-        .eq("user_id", user.id)
-        .eq("lida", false);
-      if (error) throw error;
+      await api.put(`/notificacoes/lidas`, {});
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notificacoes", user?.id] }),
   });
 
   const remover = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("notificacoes").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/notificacoes/${id}`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notificacoes", user?.id] }),
   });

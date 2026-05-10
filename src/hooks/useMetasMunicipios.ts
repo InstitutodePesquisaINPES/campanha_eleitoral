@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 
 export type CoberturaMunicipio = {
@@ -20,13 +20,8 @@ export function useCoberturaTerritorial(campanhaId?: string) {
     queryKey: ["cobertura-territorial", campanhaId],
     enabled: !!campanhaId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("v_cobertura_territorial_campanha")
-        .select("*")
-        .eq("campanha_id", campanhaId)
-        .order("municipio_nome");
-      if (error) throw error;
-      return (data || []) as CoberturaMunicipio[];
+      const data = await api.get<CoberturaMunicipio[]>(`/territorio/cobertura?campanhaId=${campanhaId}`);
+      return data || [];
     },
   });
 }
@@ -42,12 +37,7 @@ export function useUpsertMetaMunicipio() {
       prioridade?: "alta" | "media" | "baixa";
       observacoes?: string;
     }) => {
-      const { data, error } = await (supabase as any)
-        .from("campanha_metas_municipio")
-        .upsert(input, { onConflict: "campanha_id,municipio_id" })
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await api.post(`/territorio/metas`, input);
       return data;
     },
     onSuccess: (_data, vars) => {
@@ -66,39 +56,8 @@ export function useDistribuirMetaProporcional() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { campanha_id: string; meta_global: number; municipios: CoberturaMunicipio[] }) => {
-      const totalEleitorado = input.municipios.reduce((s, m) => s + (m.eleitorado_tse || 0), 0);
-      if (totalEleitorado === 0) {
-        // fallback: distribuição igual
-        const igual = Math.round(input.meta_global / Math.max(1, input.municipios.length));
-        const rows = input.municipios.map((m) => ({
-          campanha_id: input.campanha_id,
-          municipio_id: m.municipio_id,
-          meta_votos: igual,
-          meta_cadastros: Math.round(igual * 1.5),
-          prioridade: m.prioridade ?? "media",
-        }));
-        const { error } = await (supabase as any)
-          .from("campanha_metas_municipio")
-          .upsert(rows, { onConflict: "campanha_id,municipio_id" });
-        if (error) throw error;
-        return rows.length;
-      }
-      const rows = input.municipios.map((m) => {
-        const peso = (m.eleitorado_tse || 0) / totalEleitorado;
-        const meta = Math.round(input.meta_global * peso);
-        return {
-          campanha_id: input.campanha_id,
-          municipio_id: m.municipio_id,
-          meta_votos: meta,
-          meta_cadastros: Math.round(meta * 1.5),
-          prioridade: m.prioridade ?? "media",
-        };
-      });
-      const { error } = await (supabase as any)
-        .from("campanha_metas_municipio")
-        .upsert(rows, { onConflict: "campanha_id,municipio_id" });
-      if (error) throw error;
-      return rows.length;
+      const data = await api.post(`/territorio/metas/distribuir`, input);
+      return data.count || 0;
     },
     onSuccess: (count, vars) => {
       qc.invalidateQueries({ queryKey: ["cobertura-territorial", vars.campanha_id] });

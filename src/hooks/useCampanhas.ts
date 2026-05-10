@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
-import type { Database } from "@/integrations/supabase/types";
+
 
 export type Campanha = Database["public"]["Tables"]["campanhas"]["Row"];
 export type CampanhaInsert = Database["public"]["Tables"]["campanhas"]["Insert"];
@@ -22,12 +22,8 @@ export function useCampanhas() {
   return useQuery({
     queryKey: ["campanhas"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanhas")
-        .select("*, municipios(nome), estados(sigla, nome), pessoas(full_name)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const data = await api.get<Campanha[]>("/campanhas");
+      return data || [];
     },
   });
 }
@@ -37,12 +33,7 @@ export function useCampanha(id?: string) {
     queryKey: ["campanha", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanhas")
-        .select("*, municipios(nome), estados(sigla, nome), pessoas(full_name)")
-        .eq("id", id!)
-        .maybeSingle();
-      if (error) throw error;
+      const data = await api.get<Campanha>(`/campanhas/${id}`);
       return data;
     },
   });
@@ -58,12 +49,8 @@ export function useCampanhaRelacionadaAoCandidato(input?: {
     queryKey: ["campanha-relacionada-candidato", input?.nome, input?.numeroUrna, input?.cargo, input?.ano],
     enabled: !!(input?.nome || input?.numeroUrna),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanhas")
-        .select("*, municipios(nome), estados(sigla, nome)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-
+      const data = await api.get<Campanha[]>("/campanhas");
+      
       const nome = normalizarTexto(input?.nome);
       const cargo = normalizarTexto(input?.cargo);
 
@@ -85,14 +72,7 @@ export function useCampanhaAtiva() {
   return useQuery({
     queryKey: ["campanha-ativa"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanhas")
-        .select("*")
-        .eq("ativa", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
+      const data = await api.get<Campanha>("/campanhas/ativa");
       return data;
     },
   });
@@ -103,13 +83,8 @@ export function useFases(campanhaId?: string) {
     queryKey: ["fases", campanhaId],
     enabled: !!campanhaId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanha_fases")
-        .select("*")
-        .eq("campanha_id", campanhaId!)
-        .order("ordem");
-      if (error) throw error;
-      return data;
+      const data = await api.get<Fase[]>(`/campanhas/${campanhaId}/fases`);
+      return data || [];
     },
   });
 }
@@ -119,14 +94,8 @@ export function useTarefas(campanhaId?: string) {
     queryKey: ["tarefas", campanhaId],
     enabled: !!campanhaId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanha_tarefas")
-        .select("*")
-        .eq("campanha_id", campanhaId!)
-        .order("dia")
-        .order("ordem");
-      if (error) throw error;
-      return data;
+      const data = await api.get<Tarefa[]>(`/campanhas/${campanhaId}/tarefas`);
+      return data || [];
     },
   });
 }
@@ -136,13 +105,8 @@ export function useMetas(campanhaId?: string) {
     queryKey: ["metas", campanhaId],
     enabled: !!campanhaId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanha_metas")
-        .select("*")
-        .eq("campanha_id", campanhaId!)
-        .order("ordem");
-      if (error) throw error;
-      return data;
+      const data = await api.get<Meta[]>(`/campanhas/${campanhaId}/metas`);
+      return data || [];
     },
   });
 }
@@ -152,13 +116,8 @@ export function useSemanas(campanhaId?: string) {
     queryKey: ["semanas", campanhaId],
     enabled: !!campanhaId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campanha_semanas")
-        .select("*")
-        .eq("campanha_id", campanhaId!)
-        .order("numero_semana");
-      if (error) throw error;
-      return data;
+      const data = await api.get<Semana[]>(`/campanhas/${campanhaId}/semanas`);
+      return data || [];
     },
   });
 }
@@ -167,16 +126,7 @@ export function useCreateCampanha() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CampanhaInsert) => {
-      const { data, error } = await supabase
-        .from("campanhas")
-        .insert(input)
-        .select()
-        .single();
-      if (error) throw error;
-      const { error: rpcError } = await supabase.rpc("gerar_plano_90_dias" as never, {
-        _campanha_id: data.id,
-      } as never);
-      if (rpcError) throw rpcError;
+      const data = await api.post<Campanha>("/campanhas", input);
       return data;
     },
     onSuccess: () => {
@@ -193,13 +143,7 @@ export function useUpdateCampanha() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Campanha> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("campanhas")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await api.put<Campanha>(`/campanhas/${id}`, updates);
       return data;
     },
     onSuccess: (_data, vars) => {
@@ -218,13 +162,7 @@ export function useUpdateTarefa() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Tarefa> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("campanha_tarefas")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await api.put<Tarefa>(`/campanhas/tarefas/${id}`, updates);
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tarefas"] }),
@@ -236,8 +174,7 @@ export function useCreateTarefa() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Database["public"]["Tables"]["campanha_tarefas"]["Insert"]) => {
-      const { data, error } = await supabase.from("campanha_tarefas").insert(input).select().single();
-      if (error) throw error;
+      const data = await api.post<Tarefa>(`/campanhas/${input.campanha_id}/tarefas`, input);
       return data;
     },
     onSuccess: () => {
@@ -252,8 +189,7 @@ export function useDeleteTarefa() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("campanha_tarefas").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/campanhas/tarefas/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tarefas"] });
@@ -267,13 +203,7 @@ export function useUpdateMeta() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Meta> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("campanha_metas")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
+      const data = await api.put<Meta>(`/campanhas/metas/${id}`, updates);
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["metas"] }),
@@ -285,8 +215,7 @@ export function useCreateMeta() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Database["public"]["Tables"]["campanha_metas"]["Insert"]) => {
-      const { data, error } = await supabase.from("campanha_metas").insert(input).select().single();
-      if (error) throw error;
+      const data = await api.post<Meta>(`/campanhas/${input.campanha_id}/metas`, input);
       return data;
     },
     onSuccess: () => {
@@ -301,8 +230,7 @@ export function useDeleteMeta() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("campanha_metas").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/campanhas/metas/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["metas"] });

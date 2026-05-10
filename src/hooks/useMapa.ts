@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 
 export interface MapaCenario {
@@ -35,11 +35,10 @@ export function useMapaCenarios(campanhaId?: string | null) {
   return useQuery({
     queryKey: ["mapa_cenarios", campanhaId ?? "global"],
     queryFn: async () => {
-      let q = supabase.from("mapa_cenarios").select("*").order("updated_at", { ascending: false });
-      if (campanhaId) q = q.or(`campanha_id.eq.${campanhaId},campanha_id.is.null`);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as MapaCenario[];
+      let url = '/territorio/cenarios';
+      if (campanhaId) url += `?campanhaId=${campanhaId}`;
+      const data = await api.get<MapaCenario[]>(url);
+      return data || [];
     },
   });
 }
@@ -48,12 +47,7 @@ export function useSaveCenario() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<MapaCenario> & { nome: string; config: any }) => {
-      const { data: u } = await supabase.auth.getUser();
-      const userId = u.user?.id;
-      if (!userId) throw new Error("Usuário não autenticado");
-      const row = { ...payload, created_by: userId };
-      const { data, error } = await supabase.from("mapa_cenarios").insert(row).select().single();
-      if (error) throw error;
+      const data = await api.post('/territorio/cenarios', payload);
       return data;
     },
     onSuccess: () => {
@@ -68,8 +62,7 @@ export function useDeleteCenario() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("mapa_cenarios").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/territorio/cenarios/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["mapa_cenarios"] });
@@ -83,11 +76,10 @@ export function useMapaSetores(campanhaId?: string | null) {
   return useQuery({
     queryKey: ["mapa_setores", campanhaId ?? "global"],
     queryFn: async () => {
-      let q = supabase.from("mapa_setores").select("*").order("created_at", { ascending: false });
-      if (campanhaId) q = q.or(`campanha_id.eq.${campanhaId},campanha_id.is.null`);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as MapaSetor[];
+      let url = '/territorio/setores';
+      if (campanhaId) url += `?campanhaId=${campanhaId}`;
+      const data = await api.get<MapaSetor[]>(url);
+      return data || [];
     },
   });
 }
@@ -96,12 +88,7 @@ export function useSaveSetor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<MapaSetor> & { nome: string; geometria: any }) => {
-      const { data: u } = await supabase.auth.getUser();
-      const userId = u.user?.id;
-      if (!userId) throw new Error("Usuário não autenticado");
-      const row = { tipo: "setor", cor: "#3B82F6", ...payload, created_by: userId };
-      const { data, error } = await supabase.from("mapa_setores").insert(row).select().single();
-      if (error) throw error;
+      const data = await api.post('/territorio/setores', payload);
       return data;
     },
     onSuccess: () => {
@@ -116,8 +103,7 @@ export function useUpdateSetor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<MapaSetor> & { id: string }) => {
-      const { data, error } = await supabase.from("mapa_setores").update(patch).eq("id", id).select().single();
-      if (error) throw error;
+      const data = await api.put(`/territorio/setores/${id}`, patch);
       return data;
     },
     onSuccess: () => {
@@ -132,8 +118,7 @@ export function useDeleteSetor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("mapa_setores").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/territorio/setores/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["mapa_setores"] });

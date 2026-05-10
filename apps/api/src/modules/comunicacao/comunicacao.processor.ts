@@ -10,7 +10,7 @@ export class ComunicacaoProcessor extends WorkerHost {
 
   constructor(
     private readonly whatsappProvider: WhatsappProvider,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
   ) {
     super();
   }
@@ -30,28 +30,34 @@ export class ComunicacaoProcessor extends WorkerHost {
           campanhaId,
           tipo,
           mensagem,
-          status: 'processing'
-        }
+          status: 'processing',
+        },
       });
       targetLogId = log.id;
     }
 
     // Buscando telefone (vamos assumir que a PessoaContato principal seja o Celular)
     const contato = await this.prisma.pessoaContato.findFirst({
-      where: { pessoaId, principal: true, tipo: 'telefone' }
+      where: { pessoaId, principal: true, tipo: 'telefone' },
     });
 
     if (!contato) {
       await this.prisma.comunicacaoLog.update({
         where: { id: targetLogId },
-        data: { status: 'failed', errorMsg: 'Nenhum telefone principal cadastrado.' }
+        data: {
+          status: 'failed',
+          errorMsg: 'Nenhum telefone principal cadastrado.',
+        },
       });
       return;
     }
 
     let resultado;
     if (tipo === 'whatsapp') {
-      resultado = await this.whatsappProvider.enviarMensagem(contato.valor, mensagem);
+      resultado = await this.whatsappProvider.enviarMensagem(
+        contato.valor,
+        mensagem,
+      );
     } else {
       // SMS / Email providers
       resultado = { success: false, error: 'Provider não implementado' };
@@ -60,11 +66,11 @@ export class ComunicacaoProcessor extends WorkerHost {
     // Atualiza o Log com o status real do envio
     await this.prisma.comunicacaoLog.update({
       where: { id: targetLogId },
-      data: { 
+      data: {
         status: resultado.success ? 'sent' : 'failed',
         providerId: resultado.providerId,
-        errorMsg: resultado.error
-      }
+        errorMsg: resultado.error,
+      },
     });
 
     this.logger.debug(`Job ${job.id} finalizado. Status: ${resultado.success}`);

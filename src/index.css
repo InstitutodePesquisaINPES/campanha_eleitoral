@@ -161,18 +161,32 @@
   }
 
   /* --- Enterprise Glassmorphism UI --- */
-  .glass-card {
+  .tier-enterprise .glass-card {
     @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-sm transition-all duration-300;
   }
-  .dark .glass-card {
+  .tier-enterprise.dark .glass-card {
     @apply bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 shadow-md;
   }
   
-  .glass-card-hover:hover {
+  .tier-enterprise .glass-card-hover:hover {
     @apply -translate-y-1 shadow-md border-white/60;
   }
-  .dark .glass-card-hover:hover {
+  .tier-enterprise.dark .glass-card-hover:hover {
     @apply shadow-lg shadow-blue-900/20 border-slate-600/60;
+  }
+
+  /* Fallback Flat/Professional Style for glass-card */
+  .tier-professional .glass-card {
+    @apply bg-white border border-slate-200 shadow-sm;
+  }
+  .tier-professional.dark .glass-card {
+    @apply bg-slate-900 border border-slate-800 shadow-sm;
+  }
+  .tier-professional .glass-card-hover:hover {
+    @apply shadow-md border-slate-300;
+  }
+  .tier-professional.dark .glass-card-hover:hover {
+    @apply shadow-md border-slate-700;
   }
 
   .glow-text {

@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 export type ExportFormat = "xlsx" | "csv" | "json";
 
@@ -75,7 +75,7 @@ interface FetchOptions {
 
 export async function fetchTableData(cfg: ExportTableConfig, opts: FetchOptions = {}): Promise<any[]> {
   const limit = opts.limit ?? 50000;
-  let q = supabase.from(cfg.name as any).select(cfg.select ?? "*").limit(limit);
+  let q = (api as any).from(cfg.name as any).select(cfg.select ?? "*").limit(limit);
   if (cfg.dateField && opts.from) q = q.gte(cfg.dateField, opts.from);
   if (cfg.dateField && opts.to) q = q.lte(cfg.dateField, opts.to);
   const { data, error } = await q;

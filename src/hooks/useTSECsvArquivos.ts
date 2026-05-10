@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 export type TseCsvStatus =
   | "aguardando"
@@ -55,7 +55,7 @@ export function useTSECsvArquivos() {
   return useQuery({
     queryKey: ["tse-csv-arquivos"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (api as any)
         .from("tse_csv_arquivos")
         .select("*")
         .order("created_at", { ascending: false })
@@ -71,7 +71,7 @@ export function useRunTSECsvWorker() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("tse-csv-worker", {
+      const { data, error } = await (api as any).functions.invoke("tse-csv-worker", {
         body: { trigger: "manual" },
       });
       if (error) throw error;
@@ -85,7 +85,7 @@ export function usePausarTSECsvArquivo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (api as any)
         .from("tse_csv_arquivos")
         .update({ status: "pausado" })
         .eq("id", id)
@@ -100,7 +100,7 @@ export function useRetomarTSECsvArquivo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (api as any)
         .from("tse_csv_arquivos")
         .update({ status: "aguardando", error_msg: null })
         .eq("id", id);
@@ -114,7 +114,7 @@ export function useReprocessarTSECsvArquivo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (api as any)
         .from("tse_csv_arquivos")
         .update({
           status: "aguardando",
@@ -143,8 +143,8 @@ export function useExcluirTSECsvArquivo() {
         Array.isArray((arquivo as any).parts_paths) && (arquivo as any).parts_paths.length > 0
           ? ((arquivo as any).parts_paths as string[])
           : [arquivo.storage_path];
-      await supabase.storage.from("tse-csv-uploads").remove(paths);
-      const { error } = await supabase
+      await (api as any).storage.from("tse-csv-uploads").remove(paths);
+      const { error } = await (api as any)
         .from("tse_csv_arquivos")
         .delete()
         .eq("id", arquivo.id);
@@ -157,7 +157,7 @@ export function useExcluirTSECsvArquivo() {
 export function useDownloadTSECsv() {
   return useMutation({
     mutationFn: async (arquivo: TseCsvArquivo) => {
-      const { data, error } = await supabase.storage
+      const { data, error } = await (api as any).storage
         .from("tse-csv-uploads")
         .createSignedUrl(arquivo.storage_path, 300);
       if (error) throw error;
@@ -182,7 +182,7 @@ export async function arquivarCsvParaProcessamento(opts: {
   onProgress?: (pct: number) => void;
 }): Promise<TseCsvArquivo> {
   const { file, tipo, ano, uf } = opts;
-  const { data: userData } = await supabase.auth.getUser();
+  const { data: userData } = await (api as any).auth.getUser();
   const userId = userData?.user?.id;
   if (!userId) throw new Error("Usuário não autenticado");
 
@@ -206,7 +206,7 @@ export async function arquivarCsvParaProcessamento(opts: {
     // Retry simples por parte
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const { error } = await supabase.storage
+      const { error } = await (api as any).storage
         .from("tse-csv-uploads")
         .upload(partName, blob, {
           contentType: "text/csv",
@@ -233,7 +233,7 @@ export async function arquivarCsvParaProcessamento(opts: {
   opts.onProgress?.(100);
 
   // O storage_path "lógico" é a primeira parte (mantém compatibilidade com o restante)
-  const { data, error } = await supabase
+  const { data, error } = await (api as any)
     .from("tse_csv_arquivos")
     .insert({
       nome_original: file.name,
@@ -259,7 +259,7 @@ export async function arquivarCsvParaProcessamento(opts: {
   if (error) throw error;
 
   // Dispara o worker uma vez (fast-start)
-  supabase.functions.invoke("tse-csv-worker", { body: { trigger: "fast-start" } }).catch(() => {});
+  (api as any).functions.invoke("tse-csv-worker", { body: { trigger: "fast-start" } }).catch(() => {});
 
   return data as TseCsvArquivo;
 }

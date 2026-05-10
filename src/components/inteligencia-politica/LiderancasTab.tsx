@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLiderancas, useLiderancaStats, useUpsertLideranca, useDeleteLideranca, type LiderancaClassificacao, type LiderancaStatus, type LiderancaTipo } from "@/hooks/useInteligenciaPolitica";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +61,7 @@ export function LiderancasTab({ campanhaId }: { campanhaId: string }) {
   const { data: municipios = [] } = useQuery({
     queryKey: ["municipios-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("municipios").select("id, nome").order("nome").limit(500);
+      const data = await api.get<any[]>('/territorio/municipios');
       return data ?? [];
     },
   });
@@ -70,7 +70,7 @@ export function LiderancasTab({ campanhaId }: { campanhaId: string }) {
     queryKey: ["bairros-by-mun", editing?.municipio_id],
     enabled: !!editing?.municipio_id,
     queryFn: async () => {
-      const { data } = await supabase.from("bairros").select("id, nome").eq("municipio_id", editing.municipio_id).order("nome").limit(500);
+      const data = await api.get<any[]>(`/territorio/bairros?municipioId=${editing.municipio_id}`);
       return data ?? [];
     },
   });
@@ -104,12 +104,41 @@ export function LiderancasTab({ campanhaId }: { campanhaId: string }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <Card><CardContent className="p-4"><Users className="h-4 w-4 text-primary mb-1" /><div className="text-2xl font-bold">{stats?.total ?? 0}</div><p className="text-xs text-muted-foreground">Lideranças</p></CardContent></Card>
-        <Card><CardContent className="p-4"><Crown className="h-4 w-4 text-success mb-1" /><div className="text-2xl font-bold text-success">{stats?.porClass.A ?? 0}</div><p className="text-xs text-muted-foreground">Classe A</p></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-info">{stats?.porClass.B ?? 0}</div><p className="text-xs text-muted-foreground">Classe B</p></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-warning">{stats?.porClass.C ?? 0}</div><p className="text-xs text-muted-foreground">Classe C</p></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-muted-foreground">{stats?.porClass.D ?? 0}</div><p className="text-xs text-muted-foreground">Classe D</p></CardContent></Card>
-        <Card><CardContent className="p-4"><Vote className="h-4 w-4 text-primary mb-1" /><div className="text-2xl font-bold">{stats?.totalVotos.toLocaleString() ?? 0}</div><p className="text-xs text-muted-foreground">Votos estimados</p></CardContent></Card>
+        <div className="glass-card rounded-xl p-4 border border-white/40 dark:border-slate-800/60 shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <Users className="h-5 w-5 text-primary mb-2" />
+          <div className="text-3xl font-black text-slate-800 dark:text-slate-100">{stats?.total ?? 0}</div>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Lideranças</p>
+        </div>
+        <div className="glass-card rounded-xl p-4 border border-white/40 dark:border-slate-800/60 shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <Crown className="h-5 w-5 text-success mb-2" />
+          <div className="text-3xl font-black text-success drop-shadow-sm">{stats?.porClass.A ?? 0}</div>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Classe A</p>
+        </div>
+        <div className="glass-card rounded-xl p-4 border border-white/40 dark:border-slate-800/60 shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-info/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div className="h-5 w-5 mb-2"></div>
+          <div className="text-3xl font-black text-info drop-shadow-sm">{stats?.porClass.B ?? 0}</div>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Classe B</p>
+        </div>
+        <div className="glass-card rounded-xl p-4 border border-white/40 dark:border-slate-800/60 shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-warning/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div className="h-5 w-5 mb-2"></div>
+          <div className="text-3xl font-black text-warning drop-shadow-sm">{stats?.porClass.C ?? 0}</div>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Classe C</p>
+        </div>
+        <div className="glass-card rounded-xl p-4 border border-white/40 dark:border-slate-800/60 shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div className="h-5 w-5 mb-2"></div>
+          <div className="text-3xl font-black text-slate-400 drop-shadow-sm">{stats?.porClass.D ?? 0}</div>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Classe D</p>
+        </div>
+        <div className="glass-card rounded-xl p-4 border border-emerald-500/20 dark:border-emerald-500/20 shadow-sm bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 relative overflow-hidden">
+          <Vote className="h-5 w-5 text-emerald-600 mb-2" />
+          <div className="text-3xl font-black text-emerald-700 dark:text-emerald-400">{stats?.totalVotos.toLocaleString() ?? 0}</div>
+          <p className="text-xs font-bold text-emerald-600/70 uppercase tracking-wider mt-1">Votos Estimados</p>
+        </div>
       </div>
 
       <Card>

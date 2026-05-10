@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { toast } from "sonner";
 
 export type TarefaAnexo = {
@@ -22,7 +22,7 @@ export function useTarefaAnexos(tarefaId?: string) {
     queryKey: ["tarefa-anexos", tarefaId],
     enabled: !!tarefaId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (api as any)
         .from("campanha_tarefa_anexos" as never)
         .select("*")
         .eq("tarefa_id", tarefaId!)
@@ -46,13 +46,13 @@ export function useUploadTarefaAnexo() {
     }) => {
       const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${input.campanha_id}/${input.tarefa_id}/${Date.now()}-${safeName}`;
-      const { error: upErr } = await supabase.storage
+      const { error: upErr } = await (api as any).storage
         .from("tarefa-documentos")
         .upload(path, input.file, { contentType: input.file.type, upsert: false });
       if (upErr) throw upErr;
 
-      const { data: userRes } = await supabase.auth.getUser();
-      const { data, error } = await supabase
+      const { data: userRes } = await (api as any).auth.getUser();
+      const { data, error } = await (api as any)
         .from("campanha_tarefa_anexos" as never)
         .insert({
           tarefa_id: input.tarefa_id,
@@ -70,7 +70,7 @@ export function useUploadTarefaAnexo() {
         .single();
       if (error) {
         // tenta limpar arquivo se falhou registrar
-        await supabase.storage.from("tarefa-documentos").remove([path]);
+        await (api as any).storage.from("tarefa-documentos").remove([path]);
         throw error;
       }
       return data;
@@ -88,8 +88,8 @@ export function useDeleteTarefaAnexo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (anexo: TarefaAnexo) => {
-      await supabase.storage.from("tarefa-documentos").remove([anexo.storage_path]);
-      const { error } = await supabase
+      await (api as any).storage.from("tarefa-documentos").remove([anexo.storage_path]);
+      const { error } = await (api as any)
         .from("campanha_tarefa_anexos" as never)
         .delete()
         .eq("id", anexo.id);
@@ -105,7 +105,7 @@ export function useDeleteTarefaAnexo() {
 }
 
 export async function getSignedUrl(path: string) {
-  const { data, error } = await supabase.storage
+  const { data, error } = await (api as any).storage
     .from("tarefa-documentos")
     .createSignedUrl(path, 3600);
   if (error) throw error;

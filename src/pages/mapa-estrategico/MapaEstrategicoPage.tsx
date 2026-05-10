@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Map, Search, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { InteligenciaNavBar } from "@/components/inteligencia-shared/InteligenciaNavBar";
 import { useCampanhas } from "@/hooks/useCampanhas";
 
@@ -40,8 +40,8 @@ export default function MapaEstrategicoPage() {
   const { data: municipios = [] } = useQuery({
     queryKey: ["municipios-mapa"],
     queryFn: async () => {
-      const { data } = await supabase.from("municipios").select("id, nome").order("nome").limit(500);
-      return data ?? [];
+      const data = await api.get<any[]>('/territorio/municipios/strategic');
+      return data || [];
     },
   });
 

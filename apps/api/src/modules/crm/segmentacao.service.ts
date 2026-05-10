@@ -24,7 +24,10 @@ export class SegmentacaoService {
       where.score = { gte: filtros.scoreMin };
     }
     if (filtros.scoreMax) {
-      where.score = { ...(where.score as object), lte: filtros.scoreMax } as any;
+      where.score = {
+        ...(where.score as object),
+        lte: filtros.scoreMax,
+      };
     }
     if (filtros.liderancaId) {
       where.liderancaId = filtros.liderancaId;
@@ -32,22 +35,22 @@ export class SegmentacaoService {
     if (filtros.bairroIds && filtros.bairroIds.length > 0) {
       where.enderecos = {
         some: {
-          bairroId: { in: filtros.bairroIds }
-        }
+          bairroId: { in: filtros.bairroIds },
+        },
       };
     }
     if (filtros.tags && filtros.tags.length > 0) {
       where.tags = {
         some: {
-          tag: { nome: { in: filtros.tags } }
-        }
+          tag: { nome: { in: filtros.tags } },
+        },
       };
     }
     if (filtros.temDemandasAbertas) {
       where.demandas = {
         some: {
-          status: { not: 'resolvida' }
-        }
+          status: { not: 'resolvida' },
+        },
       };
     }
 
@@ -59,14 +62,14 @@ export class SegmentacaoService {
         score: true,
         contatos: {
           where: { principal: true },
-          select: { valor: true, tipo: true }
-        }
-      }
+          select: { valor: true, tipo: true },
+        },
+      },
     });
 
     return {
       total: publico.length,
-      pessoas: publico
+      pessoas: publico,
     };
   }
 }

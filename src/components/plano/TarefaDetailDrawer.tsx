@@ -33,7 +33,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { RespaldoLegalPicker } from "./RespaldoLegalPicker";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 const FASE_LEGAL_OPTS = [
   { value: "pre_campanha_legal", label: "Pré-campanha (até registro TSE)" },
@@ -160,7 +160,7 @@ export function TarefaDetailDrawer({
     queryKey: ["tarefa-historico", tarefa?.id],
     enabled: !!tarefa?.id && open,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (api as any)
         .from("audit_logs")
         .select("id, action, user_id, new_data, old_data, created_at")
         .eq("table_name", "campanha_tarefas")

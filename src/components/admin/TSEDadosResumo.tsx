@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Database, RefreshCw, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 const ANOS = [2024, 2022, 2020, 2018, 2016];
@@ -27,7 +27,7 @@ export function TSEDadosResumo() {
   const carregar = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc("tse_resumo_municipios" as any, { _ano: ano, _uf: uf });
+      const { data, error } = await (api as any).rpc("tse_resumo_municipios" as any, { _ano: ano, _uf: uf });
       if (error) throw error;
       const arr: LinhaMunicipio[] = (data ?? []).map((r: any) => ({
         municipio: r.municipio ?? "—",

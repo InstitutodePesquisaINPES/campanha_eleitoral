@@ -12,7 +12,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart
 } from "recharts";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { categoriaLabels, statusLabels } from "@/hooks/useDemandas";
 import { tipoAgendaLabels } from "@/hooks/useAgenda";
 import { categoriaDespesaLabels } from "@/hooks/useFinanceiro";
@@ -84,11 +84,11 @@ function StatCard({ icon: Icon, label, value, sub, gradientFrom, gradientTo, isN
 }
 
 // Framer Motion Variants
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
 };
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
 };

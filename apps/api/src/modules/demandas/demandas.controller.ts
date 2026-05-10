@@ -1,40 +1,63 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { DemandasService } from './demandas.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
+import {
+  CurrentTenant,
+  CurrentUser,
+} from '../../common/decorators/tenant.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('demandas')
 export class DemandasController {
   constructor(private readonly demandasService: DemandasService) {}
 
   @Get()
-  findAll(@Query() filters: any) {
-    return this.demandasService.findAll(filters);
+  findAll(@Query() filters: any, @CurrentTenant() tenantId: string) {
+    return this.demandasService.findAll(filters, tenantId);
   }
 
   @Get('stats')
-  getStats() {
-    return this.demandasService.getStats();
+  getStats(@CurrentTenant() tenantId: string) {
+    return this.demandasService.getStats(tenantId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.demandasService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentTenant() tenantId: string) {
+    return this.demandasService.findOne(id, tenantId);
   }
 
   @Post()
-  create(@Body() data: any, @Request() req: any) {
-    return this.demandasService.create(data, req.user.sub);
+  create(
+    @Body() data: any,
+    @CurrentUser() userId: string,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.demandasService.create(data, userId, tenantId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.demandasService.update(id, data);
+  update(
+    @Param('id') id: string,
+    @Body() data: any,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.demandasService.update(id, data, tenantId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.demandasService.delete(id);
+  remove(@Param('id') id: string, @CurrentTenant() tenantId: string) {
+    return this.demandasService.delete(id, tenantId);
   }
 
   // ---- ENCAMINHAMENTOS ----
@@ -44,8 +67,15 @@ export class DemandasController {
   }
 
   @Post(':id/encaminhamentos')
-  createEncaminhamento(@Param('id') id: string, @Body() data: any, @Request() req: any) {
-    return this.demandasService.createEncaminhamento({ ...data, demandaId: id }, req.user.sub);
+  createEncaminhamento(
+    @Param('id') id: string,
+    @Body() data: any,
+    @CurrentUser() userId: string,
+  ) {
+    return this.demandasService.createEncaminhamento(
+      { ...data, demandaId: id },
+      userId,
+    );
   }
 
   // ---- ANEXOS ----

@@ -1,35 +1,58 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { AgendaService } from './agenda.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
+import {
+  CurrentTenant,
+  CurrentUser,
+} from '../../common/decorators/tenant.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('agenda')
 export class AgendaController {
   constructor(private readonly agendaService: AgendaService) {}
 
   @Get()
-  findAll(@Query('month') month?: string) {
-    return this.agendaService.findAll(month);
+  findAll(@Query('month') month: string, @CurrentTenant() tenantId: string) {
+    return this.agendaService.findAll(month, tenantId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.agendaService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentTenant() tenantId: string) {
+    return this.agendaService.findOne(id, tenantId);
   }
 
   @Post()
-  create(@Body() data: any, @Request() req: any) {
-    return this.agendaService.create(data, req.user.sub);
+  create(
+    @Body() data: any,
+    @CurrentUser() userId: string,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.agendaService.create(data, userId, tenantId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.agendaService.update(id, data);
+  update(
+    @Param('id') id: string,
+    @Body() data: any,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.agendaService.update(id, data, tenantId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.agendaService.delete(id);
+  remove(@Param('id') id: string, @CurrentTenant() tenantId: string) {
+    return this.agendaService.delete(id, tenantId);
   }
 
   // ---- PARTICIPANTES ----
@@ -44,7 +67,10 @@ export class AgendaController {
   }
 
   @Patch('participantes/:participanteId')
-  updateParticipante(@Param('participanteId') participanteId: string, @Body() data: any) {
+  updateParticipante(
+    @Param('participanteId') participanteId: string,
+    @Body() data: any,
+  ) {
     return this.agendaService.updateParticipante(participanteId, data);
   }
 
@@ -60,8 +86,12 @@ export class AgendaController {
   }
 
   @Post(':id/checkins')
-  createCheckin(@Param('id') id: string, @Body() data: any, @Request() req: any) {
-    return this.agendaService.createCheckin({ ...data, agendaId: id }, req.user.sub);
+  createCheckin(
+    @Param('id') id: string,
+    @Body() data: any,
+    @CurrentUser() userId: string,
+  ) {
+    return this.agendaService.createCheckin({ ...data, agendaId: id }, userId);
   }
 
   // ---- FOLLOWUPS ----

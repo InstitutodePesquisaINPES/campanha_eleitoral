@@ -18,7 +18,7 @@ export class TerritorialService {
       orderBy: { nome: 'asc' },
     });
   }
-  
+
   async createMunicipio(data: any) {
     return this.prisma.municipio.create({ data });
   }
@@ -35,9 +35,9 @@ export class TerritorialService {
   async getBairros(municipioId?: string) {
     return this.prisma.bairro.findMany({
       where: municipioId ? { municipioId } : undefined,
-      include: { 
+      include: {
         municipio: { select: { nome: true } },
-        distrito: { select: { nome: true } } 
+        distrito: { select: { nome: true } },
       },
       orderBy: { nome: 'asc' },
     });
@@ -76,13 +76,13 @@ export class TerritorialService {
   async getSecoesEleitorais(zonaId?: string) {
     return this.prisma.secaoEleitoral.findMany({
       where: zonaId ? { zonaId } : undefined,
-      include: { 
-        zona: { 
-          select: { 
-            numeroZona: true, 
-            municipio: { select: { nome: true } } 
-          } 
-        } 
+      include: {
+        zona: {
+          select: {
+            numeroZona: true,
+            municipio: { select: { nome: true } },
+          },
+        },
       },
       orderBy: { numeroSecao: 'asc' },
     });
@@ -114,7 +114,13 @@ export class TerritorialService {
   }
 
   // Areas de Atuacao mocked until model is added
-  async getAreasAtuacao(municipioId?: string) { return []; }
-  async createAreaAtuacao(data: any) { return {}; }
-  async deleteAreaAtuacao(id: string) { return {}; }
+  async getAreasAtuacao(municipioId?: string) {
+    return [];
+  }
+  async createAreaAtuacao(data: any) {
+    return {};
+  }
+  async deleteAreaAtuacao(id: string) {
+    return {};
+  }
 }

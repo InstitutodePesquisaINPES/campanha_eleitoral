@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 import { useDemografiaMunicipio, useTopMunicipios } from "@/hooks/useDemografia";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,7 +20,7 @@ export function DemografiaTab() {
   const { data: municipios = [] } = useQuery({
     queryKey: ["municipios-demografia-list"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await ((api as any) as any)
         .from("municipios")
         .select("id, nome, populacao_2022, area_km2, idh, urbano_pct, densidade_hab_km2")
         .order("nome");

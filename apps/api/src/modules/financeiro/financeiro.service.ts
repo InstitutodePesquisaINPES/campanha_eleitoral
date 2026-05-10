@@ -6,24 +6,29 @@ export class FinanceiroService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ---- CENTROS DE CUSTO ----
-  async getCentrosCusto() {
+  async getCentrosCusto(tenantId: string) {
     return this.prisma.centroCusto.findMany({
+      where: { tenantId },
       orderBy: { nome: 'asc' },
     });
   }
 
-  async createCentroCusto(data: any) {
-    return this.prisma.centroCusto.create({ data });
+  async createCentroCusto(data: any, tenantId: string) {
+    return this.prisma.centroCusto.create({ data: { ...data, tenantId } });
   }
 
-  async deleteCentroCusto(id: string) {
-    return this.prisma.centroCusto.delete({ where: { id } });
+  async deleteCentroCusto(id: string, tenantId: string) {
+    return this.prisma.centroCusto.delete({ where: { id, tenantId } as any });
   }
 
   // ---- DESPESAS ----
-  async findAllDespesas(centroCustoId?: string) {
+  async findAllDespesas(tenantId: string, centroCustoId?: string) {
+    const where: any = { tenantId };
+    if (centroCustoId && centroCustoId !== 'all') {
+      where.centroCustoId = centroCustoId;
+    }
     return this.prisma.despesa.findMany({
-      where: centroCustoId && centroCustoId !== 'all' ? { centroCustoId } : undefined,
+      where,
       include: {
         centroCusto: { select: { nome: true } },
       },
@@ -32,27 +37,31 @@ export class FinanceiroService {
     });
   }
 
-  async createDespesa(data: any, userId: string) {
-    return this.prisma.despesa.create({ 
-      data: { ...data, responsavelId: userId } 
+  async createDespesa(data: any, userId: string, tenantId: string) {
+    return this.prisma.despesa.create({
+      data: { ...data, responsavelId: userId, tenantId },
     });
   }
 
-  async updateDespesa(id: string, data: any) {
+  async updateDespesa(id: string, data: any, tenantId: string) {
     return this.prisma.despesa.update({
-      where: { id },
+      where: { id, tenantId } as any,
       data,
     });
   }
 
-  async deleteDespesa(id: string) {
-    return this.prisma.despesa.delete({ where: { id } });
+  async deleteDespesa(id: string, tenantId: string) {
+    return this.prisma.despesa.delete({ where: { id, tenantId } as any });
   }
 
   // ---- RECEITAS ----
-  async findAllReceitas(centroCustoId?: string) {
+  async findAllReceitas(tenantId: string, centroCustoId?: string) {
+    const where: any = { tenantId };
+    if (centroCustoId && centroCustoId !== 'all') {
+      where.centroCustoId = centroCustoId;
+    }
     return this.prisma.receita.findMany({
-      where: centroCustoId && centroCustoId !== 'all' ? { centroCustoId } : undefined,
+      where,
       include: {
         centroCusto: { select: { nome: true } },
       },
@@ -61,11 +70,11 @@ export class FinanceiroService {
     });
   }
 
-  async createReceita(data: any) {
-    return this.prisma.receita.create({ data });
+  async createReceita(data: any, tenantId: string) {
+    return this.prisma.receita.create({ data: { ...data, tenantId } });
   }
 
-  async deleteReceita(id: string) {
-    return this.prisma.receita.delete({ where: { id } });
+  async deleteReceita(id: string, tenantId: string) {
+    return this.prisma.receita.delete({ where: { id, tenantId } as any });
   }
 }

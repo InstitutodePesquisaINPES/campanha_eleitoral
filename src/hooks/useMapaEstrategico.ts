@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/apiClient";
 
 export type SituacaoBairro = "forte" | "medio" | "fraco" | "critico";
 
@@ -57,11 +57,10 @@ export function useMapaEstrategico(municipioId?: string) {
   return useQuery({
     queryKey: ["mapa-estrategico", municipioId],
     queryFn: async () => {
-      let q = supabase.from("mapa_estrategico_bairros" as never).select("*");
-      if (municipioId) q = q.eq("municipio_id", municipioId);
-      const { data, error } = await q;
-      if (error) throw error;
-      return ((data ?? []) as Array<Omit<BairroEstrategico, "cobertura_pct" | "situacao" | "prioridade" | "acao_recomendada">>).map((b) => ({
+      let url = '/territorio/mapa-estrategico/bairros';
+      if (municipioId) url += `?municipioId=${municipioId}`;
+      const data = await api.get<any[]>(url);
+      return (data || []).map((b) => ({
         ...b,
         ...classificar(b),
       })) as BairroEstrategico[];

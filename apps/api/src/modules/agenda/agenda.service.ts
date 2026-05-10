@@ -6,21 +6,22 @@ export class AgendaService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ---- AGENDA ----
-  async findAll(month?: string) {
-    let whereClause = {};
+  async findAll(month: string | undefined, tenantId: string) {
+    let whereClause: any = { tenantId };
     if (month) {
       const year = parseInt(month.split('-')[0]);
       const mon = parseInt(month.split('-')[1]);
       const startDate = new Date(year, mon - 1, 1);
       const endDate = new Date(year, mon, 0, 23, 59, 59);
       whereClause = {
+        ...whereClause,
         dataInicio: {
           gte: startDate,
           lte: endDate,
-        }
+        },
       };
     }
-    
+
     return this.prisma.agenda.findMany({
       where: whereClause,
       include: {
@@ -32,11 +33,11 @@ export class AgendaService {
     });
   }
 
-  async findOne(id: string) {
-    const evento = await this.prisma.agenda.findUnique({
-      where: { id },
-      include: { 
-        participantes: { include: { pessoa: { select: { fullName: true } } } }, 
+  async findOne(id: string, tenantId: string) {
+    const evento = await this.prisma.agenda.findFirst({
+      where: { id, tenantId },
+      include: {
+        participantes: { include: { pessoa: { select: { fullName: true } } } },
         responsavel: { select: { fullName: true } },
         checkins: true,
         followups: true,
@@ -46,23 +47,26 @@ export class AgendaService {
     return evento;
   }
 
-  async create(data: any, userId: string) {
+  async create(data: any, userId: string, tenantId: string) {
     return this.prisma.agenda.create({
       data: {
         ...data,
         createdBy: userId,
+        tenantId,
       },
     });
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: any, tenantId: string) {
+    await this.findOne(id, tenantId); // Assert ownership
     return this.prisma.agenda.update({
       where: { id },
       data,
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, tenantId: string) {
+    await this.findOne(id, tenantId); // Assert ownership
     return this.prisma.agenda.delete({
       where: { id },
     });
@@ -73,7 +77,7 @@ export class AgendaService {
     return this.prisma.agendaParticipante.findMany({
       where: { agendaId },
       include: { pessoa: { select: { fullName: true } } },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
     });
   }
 
@@ -93,13 +97,13 @@ export class AgendaService {
   async getCheckins(agendaId: string) {
     return this.prisma.agendaCheckin.findMany({
       where: { agendaId },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
     });
   }
 
   async createCheckin(data: any, userId: string) {
     return this.prisma.agendaCheckin.create({
-      data: { ...data, usuarioId: userId }
+      data: { ...data, usuarioId: userId },
     });
   }
 
@@ -107,7 +111,7 @@ export class AgendaService {
   async getFollowups(agendaId: string) {
     return this.prisma.agendaFollowup.findMany({
       where: { agendaId },
-      orderBy: { prazo: 'asc' }
+      orderBy: { prazo: 'asc' },
     });
   }
 
