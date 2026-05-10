@@ -25,7 +25,10 @@ import {
   Sparkles,
   TrendingUp,
   BarChartBig,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -161,6 +164,8 @@ export function AppSidebar() {
   const brandNumber = getSetting("brand_number", "70");
   const brandSubtitle = getSetting("brand_subtitle", "Avante · Dep. Federal");
 
+  const { mode, setMode, effectiveMode } = useTheme();
+
   const initials = (profile?.full_name || "U")
     .split(" ")
     .map((n) => n[0])
@@ -213,6 +218,15 @@ export function AppSidebar() {
                   <span className="truncate text-xs">{profile?.full_name || "Meu Perfil"}</span>
                 )}
               </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => setMode(effectiveMode === "dark" ? "light" : "dark")}
+              tooltip={effectiveMode === "dark" ? "Modo Claro" : "Modo Escuro"}
+            >
+              {effectiveMode === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {!collapsed && <span>{effectiveMode === "dark" ? "Modo Claro" : "Modo Escuro"}</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

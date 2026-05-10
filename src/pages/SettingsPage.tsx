@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Settings, Brush, Trophy, Building } from "lucide-react";
+import { ThemePanel } from "@/components/ui/ThemePanel";
 
 export default function SettingsPage() {
   const { data: roles = [], isLoading: rolesLoading } = useUserRoles();
@@ -124,7 +125,12 @@ export default function SettingsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* IDENTIDADE VISUAL */}
+          {/* THEME ENGINE */}
+        <div className="md:col-span-2">
+          <ThemePanel />
+        </div>
+
+        {/* IDENTIDADE VISUAL */}
           <Card className="shadow-sm border-slate-200">
             <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
               <CardTitle className="text-lg flex items-center gap-2"><Brush className="w-5 h-5 text-indigo-500" /> Identidade Visual (Sidebar)</CardTitle>
