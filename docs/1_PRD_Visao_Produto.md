@@ -10,19 +10,29 @@ A política moderna ainda opera em silos de dados. Campanhas gastam milhões, ma
 **O que o Kiribamba é:**
 Um centro de comando tático. Uma plataforma "all-in-one" onde o QG de campanha analisa mapas de calor, a liderança cadastra eleitores, e o robô de IA cruza os dados do TSE para indicar onde há fuga de votos.
 
-## 2. Público-Alvo e Personas
+## 2. A Hierarquia da Campanha (Personas e Cargos)
 
-### Persona 1: "O Comandante" (Candidato ou Coordenador-Geral)
-- **Dor:** Falta de clareza sobre onde a campanha está ganhando ou perdendo força. Não sabe exatamente o ROI (Retorno sobre Investimento) dos cabos eleitorais.
-- **O que usa no App:** Dashboard Executivo de KPIs, War Room de Alertas Críticos, Mapas de Calor Georreferenciados (BI) e o Copilot de IA para ler cenários eleitorais diários.
+A plataforma modela a estrutura exata de uma eleição profissional, dividindo acessos em 12 permissões (`AppRole`) isoladas.
 
-### Persona 2: "O Líder Regional"
-- **Dor:** Tem dificuldade para organizar o fluxo financeiro de santinhos e a agenda do candidato em sua região.
-- **O que usa no App:** CRM Territorial, painel de Gestão de Demandas (ofícios, asfalto, consultas) e acompanhamento de Entregas Logísticas de materiais.
+### 👑 Núcleo Executivo
+- **`candidato`**: Acesso de topo. Focado em relatórios de alto nível, BI de territórios e Copilot AI para tomada de decisões. Sem distrações operacionais.
+- **`admin`**: Administrador Master (Agência/TI). Controle sobre configurações globais de sistema e billing.
+- **`coord_geral`**: Chefe de Campanha. Autoridade máxima na operação diária, tem visão global de orçamentos, demandas e equipe.
 
-### Persona 3: "O Cabo Eleitoral / Militância"
-- **Dor:** Internet 3G falha na periferia/interior; esquece o que conversou com o eleitor. Precisa de uma forma ágil de bater meta.
-- **O que usa no App:** Versão PWA (Offline-first) no celular. Cadastra eleitores via formulário rápido, ganha pontos no Sistema de Gamificação por meta batida.
+### 🎯 Núcleos Táticos (Especialistas)
+- **`coord_financeiro`**: Acesso focado no fluxo de caixa, pagamentos, contratos e limites impostos pelo TSE.
+- **`coord_juridico`**: Foco em compliance eleitoral, acompanhamento de prazos e denúncias.
+- **`coord_comunicacao`**: Opera o "War Room" de redes sociais. Gerencia pautas, requisição de materiais e menções.
+- **`coord_mobilizacao`**: O "Mestre do Território". Usa o BI de Mapas para designar onde as lideranças devem focar esforço.
+
+### 📍 Lideranças e Operação de Rua
+- **`lideranca_regional`**: (Ex: Prefeitos de cidade base). Gerencia os líderes menores e acessa os KPIs de voto estritamente na sua região de influência.
+- **`lideranca_local`**: (Ex: Vereador ou Presidente de Bairro). Focado em gerir seus próprios cabos eleitorais e bater metas semanais.
+- **`cabo_eleitoral`**: O militante de base. Utiliza a versão "PWA Offline" no celular para bater de porta em porta, cadastrar eleitores no CRM e visualizar suas metas diárias.
+
+### 💻 Retaguarda Operacional
+- **`operador_crm`**: Operador de telemarketing focado em contatar as bases e disparar comunicações direcionadas.
+- **`analista_dados`**: Perfil técnico focado em subir relatórios quantitativos e qualitativos (pesquisas) para retroalimentar a IA da plataforma.
 
 ---
 

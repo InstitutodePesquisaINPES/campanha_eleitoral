@@ -81,11 +81,18 @@ model Tenant {
 }
 
 enum AppRole {
+  candidato
   admin
-  coordenador
-  lideranca
-  operador
-  visualizador
+  coord_geral
+  coord_financeiro
+  coord_juridico
+  coord_comunicacao
+  coord_mobilizacao
+  lideranca_regional
+  lideranca_local
+  cabo_eleitoral
+  operador_crm
+  analista_dados
 }
 
 model User {

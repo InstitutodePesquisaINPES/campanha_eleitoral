@@ -14,12 +14,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 
-/**
  * Dashboard por perfil. Renderiza blocos diferentes conforme as roles do usuário.
- * - admin/coordenador: visão completa (KPIs + ações + alertas + briefing)
- * - lideranca: KPIs operacionais + meus itens + briefing
- * - operador: meus itens + ações + KPIs operacionais
- * - visualizador (sem manage): KPIs read-only + briefing, sem ações rápidas
+ * - admin/candidato/coord_geral: visão completa
+ * - coordenadores específicos: visão setorial
+ * - lideranças/cabos: visão de campo e metas
+ * - operadores: visão de tarefas
  */
 export function RoleBasedDashboard() {
   const { data: profile } = useProfile();
@@ -28,17 +27,24 @@ export function RoleBasedDashboard() {
   const { data: kpis, isLoading } = useDashboardKPIs();
 
   const isAdmin = roles.includes("admin");
-  const isCoord = roles.includes("coordenador");
-  const isLider = roles.includes("lideranca");
-  const isOperador = roles.includes("operador");
-  const isExecutivo = isAdmin || isCoord;
+  const isCandidato = roles.includes("candidato");
+  const isCoordGeral = roles.includes("coord_geral");
+  const isExecutivo = isAdmin || isCandidato || isCoordGeral;
+
+  const isCoordFin = roles.includes("coord_financeiro");
+  const isCoordCom = roles.includes("coord_comunicacao");
+  const isCoordMob = roles.includes("coord_mobilizacao");
+  const isCampo = roles.includes("lideranca_regional") || roles.includes("lideranca_local") || roles.includes("cabo_eleitoral");
 
   const roleLabel =
     isAdmin ? "Administração geral"
-    : isCoord ? "Coordenação executiva"
-    : isLider ? "Liderança regional"
-    : isOperador ? "Operação"
-    : "Visualização";
+    : isCandidato ? "Candidato"
+    : isCoordGeral ? "Coordenação geral"
+    : isCoordFin ? "Coordenação Financeira"
+    : isCoordCom ? "Coordenação de Comunicação"
+    : isCoordMob ? "Coordenação de Mobilização"
+    : isCampo ? "Operação de Campo"
+    : roles[0] ? roles[0].replace("_", " ") : "Visualização";
 
   return (
     <div className="space-y-6 max-w-[1500px] mx-auto">
@@ -114,31 +120,35 @@ export function RoleBasedDashboard() {
           href="/territorios" tone="info" loading={isLoading}
         />
 
-        {/* Visões executivas */}
-        {isExecutivo && (
-          <>
-            <KPIClusterCard
-              icon={Wallet} label="Orçamento"
-              value={`${(kpis?.pctOrcamento ?? 0).toFixed(0)}%`}
-              sub={kpis?.contratosVencendo ? `${kpis.contratosVencendo} contratos vencendo` : "no limite"}
-              href="/financeiro"
-              progress={kpis?.pctOrcamento}
-              tone={kpis && kpis.pctOrcamento > 85 ? "destructive" : "primary"}
-              loading={isLoading}
-            />
-            <KPIClusterCard
-              icon={MessageSquare} label="Comunicação"
-              value={(kpis?.pecasPendentes ?? 0) + (kpis?.mencoesAbertas ?? 0)}
-              sub={`${kpis?.pecasPendentes ?? 0} peças · ${kpis?.mencoesAbertas ?? 0} menções`}
-              href="/comunicacao" tone="info" loading={isLoading}
-            />
-            <KPIClusterCard
-              icon={Package} label="Materiais ativos"
-              value={kpis?.materiais ?? 0}
-              sub="catálogo"
-              href="/materiais" tone="info" loading={isLoading}
-            />
-          </>
+        {/* Visões executivas e setoriais */}
+        {(isExecutivo || isCoordFin) && (
+          <KPIClusterCard
+            icon={Wallet} label="Orçamento"
+            value={`${(kpis?.pctOrcamento ?? 0).toFixed(0)}%`}
+            sub={kpis?.contratosVencendo ? `${kpis.contratosVencendo} contratos vencendo` : "no limite"}
+            href="/financeiro"
+            progress={kpis?.pctOrcamento}
+            tone={kpis && kpis.pctOrcamento > 85 ? "destructive" : "primary"}
+            loading={isLoading}
+          />
+        )}
+        
+        {(isExecutivo || isCoordCom) && (
+          <KPIClusterCard
+            icon={MessageSquare} label="Comunicação"
+            value={(kpis?.pecasPendentes ?? 0) + (kpis?.mencoesAbertas ?? 0)}
+            sub={`${kpis?.pecasPendentes ?? 0} peças · ${kpis?.mencoesAbertas ?? 0} menções`}
+            href="/comunicacao" tone="info" loading={isLoading}
+          />
+        )}
+        
+        {(isExecutivo || isCoordMob || isCoordCom) && (
+          <KPIClusterCard
+            icon={Package} label="Materiais ativos"
+            value={kpis?.materiais ?? 0}
+            sub="catálogo"
+            href="/materiais" tone="info" loading={isLoading}
+          />
         )}
       </div>
 

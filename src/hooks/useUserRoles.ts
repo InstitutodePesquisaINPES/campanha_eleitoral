@@ -2,9 +2,29 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type AppRole = "admin" | "coordenador" | "lideranca" | "operador" | "visualizador";
+export type AppRole = 
+  | "candidato"
+  | "admin"
+  | "coord_geral"
+  | "coord_financeiro"
+  | "coord_juridico"
+  | "coord_comunicacao"
+  | "coord_mobilizacao"
+  | "lideranca_regional"
+  | "lideranca_local"
+  | "cabo_eleitoral"
+  | "operador_crm"
+  | "analista_dados";
 
-const MANAGE_ROLES: AppRole[] = ["admin", "coordenador", "lideranca", "operador"];
+const MANAGE_ROLES: AppRole[] = [
+  "admin", 
+  "coord_geral", 
+  "coord_financeiro", 
+  "coord_juridico", 
+  "coord_comunicacao", 
+  "coord_mobilizacao", 
+  "lideranca_regional"
+];
 
 export function useUserRoles() {
   const { user, loading } = useAuth();
