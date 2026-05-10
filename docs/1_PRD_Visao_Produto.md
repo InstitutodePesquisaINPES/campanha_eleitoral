@@ -61,6 +61,10 @@ A plataforma modela a estrutura exata de uma eleição profissional, dividindo a
 - Progressive Web App instalável nativamente em iOS/Android.
 - Armazenamento em cache (Workbox) que mantém a interface viva sem internet.
 
+### 🛡️ Governança Corporativa e Auditoria
+- **Hierarquia Estrita (RBAC):** Escalada de privilégios bloqueada por design. O sistema não permite que um usuário conceda patentes superiores à sua própria.
+- **Audit Logs:** Big Brother corporativo. Todo `INSERT`, `UPDATE` ou `DELETE` gera um rastro inalterável (`AuditLog`), atrelando quem alterou, quando e o que mudou (JSON diff). Isso blinda o QG contra sabotagens e fraudes operacionais.
+
 ---
 
 ## 4. Diferencial Competitivo (Moat)

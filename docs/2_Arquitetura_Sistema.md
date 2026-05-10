@@ -33,13 +33,15 @@ Após rigorosas auditorias estruturais (Hardening), a API NestJS não possui ins
 
 ---
 
-## 4. Ecossistema Frontend
+## 4. Ecossistema Frontend e RBAC Corporativo
 
-- **Acesso:** Baseado em contexto (`useUserRoles()`). A plataforma detecta as permissões de acesso: *Admin*, *Coordenador*, *Liderança*, *Operador* ou *Visualizador*.
-- **Roteamento:** As páginas vitais são encapsuladas por um componente `<ProtectedRoute />` que lida transparentemente com tokens expirados (HTTP 401) e permissões insuficientes (HTTP 403).
-- **PWA (Progressive Web App):** 
-  - A interface possui um Manifesto Web válido gerado pelo `vite-plugin-pwa`. 
-  - Utiliza estratégias do Workbox (`NetworkFirst`) que persistem consultas de API no IndexedDB/CacheStorage do navegador por até 7 dias, habilitando o uso do App mesmo sem rede móvel na rua.
+- **RBAC Hierárquico Avançado:** O acesso não é genérico. O React consome o hook `useUserRoles()` e monta uma interface mutante baseada em 12 patentes (`AppRole`), que vão desde o `candidato` (Dashboard de BI), passam por áreas restritas como `coord_financeiro` (Orçamento/TSE), até o braço operacional `cabo_eleitoral`.
+- **Prevenção de Escalada de Privilégios (Privilege Escalation):** No Backend e no Frontend, o recrutamento e gestão de usuários ocorrem através de uma Matriz de Pesos. Um líder regional não tem permissão via API ou UI de cadastrar ou alterar acessos de alguém em uma patente superior à dele.
+- **Auditoria Contínua (Audit Logs):** Cada ação de CRUD crítica (especialmente na equipe de usuários e financeiro) deixa um rastro inalterável na tabela `AuditLog`, anexando `userId`, `tenantId`, e os deltas do payload `oldData/newData`.
+- **Roteamento Dinâmico:** As rotas vitais são protegidas por um componente `<ProtectedRoute />` que exige autenticação. Telas administrativas exigem a constante de permissões `MANAGE_ROLES`.
+- **Resiliência de Campo (PWA):** 
+  - A interface possui um Manifesto Web válido (`vite-plugin-pwa`). 
+  - Estratégias do Workbox (`NetworkFirst` e `CacheFirst`) persistem consultas vitais no IndexedDB/CacheStorage. O App funciona mesmo em zonas de sombra 3G, essencial para as lideranças operacionais.
 
 ---
 
