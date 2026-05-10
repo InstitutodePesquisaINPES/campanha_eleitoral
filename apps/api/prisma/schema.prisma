@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── GOVERNANÇA ─────────────────────────────────────────────
+
+enum AppRole {
+  admin
+  coordenador
+  lideranca
+  operador
+  visualizador
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  fullName     String    @default("") @map("full_name")
+  phone        String?
+  cpf          String?
+  avatarUrl    String?   @map("avatar_url")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  roles         UserRole[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model UserRole {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      AppRole
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  action    String
+  tableName String   @map("table_name")
+  recordId  String?  @map("record_id")
+  oldData   Json?    @map("old_data")
+  newData   Json?    @map("new_data")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tableName])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  value       Json     @default("{}")
+  description String?
+  updatedBy   String?  @map("updated_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+// ─── TSE IMPORT CONTROL ─────────────────────────────────────
+
+model TseImportJob {
+  id                   String    @id @default(uuid()) @db.Uuid
+  tipo                 String
+  uf                   String
+  ano                  Int
+  status               String    @default("queued")
+  totalRegistros       Int?      @map("total_registros")
+  registrosProcessados Int?      @map("registros_processados")
+  progressPct          Float     @default(0) @map("progress_pct")
+  errorMsg             String?   @map("error_msg")
+  sourceUrl            String?   @map("source_url")
+  startedAt            DateTime? @map("started_at")
+  finishedAt           DateTime? @map("finished_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  logs TseImportLog[]
+
+  @@map("tse_import_jobs")
+}
+
+model TseImportLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  jobId     String   @map("job_id") @db.Uuid
+  level     String   @default("info")
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job TseImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("tse_import_logs")
+}
