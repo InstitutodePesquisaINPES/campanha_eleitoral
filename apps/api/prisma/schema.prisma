@@ -8,6 +8,48 @@ datasource db {
 
 // ─── GOVERNANÇA ─────────────────────────────────────────────
 
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users                  User[]
+  userRoles              UserRole[]
+  refreshTokens          RefreshToken[]
+  auditLogs              AuditLog[]
+  systemSettings         SystemSetting[]
+  pessoas                Pessoa[]
+  pessoaContatos         PessoaContato[]
+  pessoaEnderecos        PessoaEndereco[]
+  pessoaPapels           PessoaPapel[]
+  tags                   Tag[]
+  pessoaTags             PessoaTag[]
+  demandas               Demanda[]
+  demandaEncaminhamentos DemandaEncaminhamento[]
+  demandaAnexos          DemandaAnexo[]
+  agendas                Agenda[]
+  agendaParticipantes    AgendaParticipante[]
+  agendaCheckins         AgendaCheckin[]
+  agendaFollowups        AgendaFollowup[]
+  centroCustos           CentroCusto[]
+  despesas               Despesa[]
+  receitas               Receita[]
+  tseImportJobs          TseImportJob[]
+  tseImportLogs          TseImportLog[]
+  gamificacaoRegras      GamificacaoRegra[]
+  comunicacaoCampanhas   ComunicacaoCampanha[]
+  comunicacaoLogs        ComunicacaoLog[]
+  campanhaEstrategias    CampanhaEstrategia[]
+  eixoEstrategicos       EixoEstrategico[]
+  planoAcaos             PlanoAcao[]
+  campanhaParcerias      CampanhaParceria[]
+
+  @@map("tenants")
+}
+
 enum AppRole {
   admin
   coordenador
@@ -17,25 +59,27 @@ enum AppRole {
 }
 
 model User {
-  id           String    @id @default(uuid()) @db.Uuid
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  fullName     String    @default("") @map("full_name")
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @default("") @map("full_name")
   phone        String?
   cpf          String?
-  avatarUrl    String?   @map("avatar_url")
-  active       Boolean   @default(true)
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  avatarUrl    String?  @map("avatar_url")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  roles         UserRole[]
-  refreshTokens RefreshToken[]
-  pessoasCriadas Pessoa[]     @relation("PessoaCreatedBy")
-  demandasCriadas Demanda[]   @relation("DemandaCreatedBy")
-  demandasAtribuidas Demanda[] @relation("DemandaAtribuidaA")
-  eventosCriados Agenda[]     @relation("AgendaCreatedBy")
-  eventosAtribuidos Agenda[]  @relation("AgendaResponsavelId")
-  planosAcao      PlanoAcao[] @relation("PlanoAcaoResponsavel")
+  roles              UserRole[]
+  refreshTokens      RefreshToken[]
+  pessoasCriadas     Pessoa[]       @relation("PessoaCreatedBy")
+  demandasCriadas    Demanda[]      @relation("DemandaCreatedBy")
+  demandasAtribuidas Demanda[]      @relation("DemandaAtribuidaA")
+  eventosCriados     Agenda[]       @relation("AgendaCreatedBy")
+  eventosAtribuidos  Agenda[]       @relation("AgendaResponsavelId")
+  planosAcao         PlanoAcao[]    @relation("PlanoAcaoResponsavel")
+  tenantId           String         @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant             Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("users")
 }
@@ -46,7 +90,9 @@ model UserRole {
   role      AppRole
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([userId, role])
   @@map("user_roles")
@@ -60,7 +106,9 @@ model RefreshToken {
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
 }
@@ -75,6 +123,8 @@ model AuditLog {
   newData   Json?    @map("new_data")
   ipAddress String?  @map("ip_address")
   createdAt DateTime @default(now()) @map("created_at")
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tableName])
   @@index([userId])
@@ -90,6 +140,8 @@ model SystemSetting {
   updatedBy   String?  @map("updated_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  tenantId    String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("system_settings")
 }
@@ -97,114 +149,114 @@ model SystemSetting {
 // ─── TERRITORIAL ─────────────────────────────────────────────
 
 model Estado {
-  id            String      @id @default(uuid()) @db.Uuid
+  id            String   @id @default(uuid()) @db.Uuid
   nome          String
-  sigla         String      @unique @db.Char(2)
-  geocodigoIbge String?     @unique @map("geocodigo_ibge")
+  sigla         String   @unique @db.Char(2)
+  geocodigoIbge String?  @unique @map("geocodigo_ibge")
   latitude      Float?
   longitude     Float?
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  municipios    Municipio[]
+  municipios Municipio[]
 
   @@map("estados")
 }
 
 model Municipio {
-  id              String    @id @default(uuid()) @db.Uuid
-  estadoId        String    @map("estado_id") @db.Uuid
+  id              String   @id @default(uuid()) @db.Uuid
+  estadoId        String   @map("estado_id") @db.Uuid
   nome            String
-  geocodigoIbge   String?   @unique @map("geocodigo_ibge")
+  geocodigoIbge   String?  @unique @map("geocodigo_ibge")
   populacao       Int?
-  eleitoradoTotal Int?      @map("eleitorado_total")
+  eleitoradoTotal Int?     @map("eleitorado_total")
   latitude        Float?
   longitude       Float?
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  estado          Estado    @relation(fields: [estadoId], references: [id], onDelete: Cascade)
-  bairros         Bairro[]
-  distritos       Distrito[]
-  zonas           ZonaEleitoral[]
+  estado    Estado          @relation(fields: [estadoId], references: [id], onDelete: Cascade)
+  bairros   Bairro[]
+  distritos Distrito[]
+  zonas     ZonaEleitoral[]
 
   @@map("municipios")
 }
 
 model Distrito {
-  id            String    @id @default(uuid()) @db.Uuid
-  municipioId   String    @map("municipio_id") @db.Uuid
+  id            String   @id @default(uuid()) @db.Uuid
+  municipioId   String   @map("municipio_id") @db.Uuid
   nome          String
-  geocodigoIbge String?   @map("geocodigo_ibge")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  geocodigoIbge String?  @map("geocodigo_ibge")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  municipio     Municipio @relation(fields: [municipioId], references: [id], onDelete: Cascade)
-  bairros       Bairro[]
+  municipio Municipio @relation(fields: [municipioId], references: [id], onDelete: Cascade)
+  bairros   Bairro[]
 
   @@map("distritos")
 }
 
 model Bairro {
-  id            String    @id @default(uuid()) @db.Uuid
-  municipioId   String    @map("municipio_id") @db.Uuid
-  distritoId    String?   @map("distrito_id") @db.Uuid
+  id            String   @id @default(uuid()) @db.Uuid
+  municipioId   String   @map("municipio_id") @db.Uuid
+  distritoId    String?  @map("distrito_id") @db.Uuid
   nome          String
-  classificacao String?   // enum in DB
+  classificacao String? // enum in DB
   latitude      Float?
   longitude     Float?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  municipio     Municipio @relation(fields: [municipioId], references: [id], onDelete: Cascade)
-  distrito      Distrito? @relation(fields: [distritoId], references: [id], onDelete: SetNull)
-  comunidades   Comunidade[]
+  municipio   Municipio    @relation(fields: [municipioId], references: [id], onDelete: Cascade)
+  distrito    Distrito?    @relation(fields: [distritoId], references: [id], onDelete: SetNull)
+  comunidades Comunidade[]
 
   @@map("bairros")
 }
 
 model Comunidade {
-  id          String    @id @default(uuid()) @db.Uuid
-  bairroId    String    @map("bairro_id") @db.Uuid
-  nome        String
-  microarea   String?
-  latitude    Float?
-  longitude   Float?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id        String   @id @default(uuid()) @db.Uuid
+  bairroId  String   @map("bairro_id") @db.Uuid
+  nome      String
+  microarea String?
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  bairro      Bairro    @relation(fields: [bairroId], references: [id], onDelete: Cascade)
+  bairro Bairro @relation(fields: [bairroId], references: [id], onDelete: Cascade)
 
   @@map("comunidades")
 }
 
 model ZonaEleitoral {
-  id               String    @id @default(uuid()) @db.Uuid
-  municipioId      String    @map("municipio_id") @db.Uuid
-  numeroZona       Int       @map("numero_zona")
-  tribunalRegional String?   @map("tribunal_regional")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id               String   @id @default(uuid()) @db.Uuid
+  municipioId      String   @map("municipio_id") @db.Uuid
+  numeroZona       Int      @map("numero_zona")
+  tribunalRegional String?  @map("tribunal_regional")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
-  municipio        Municipio @relation(fields: [municipioId], references: [id], onDelete: Cascade)
-  secoes           SecaoEleitoral[]
+  municipio Municipio        @relation(fields: [municipioId], references: [id], onDelete: Cascade)
+  secoes    SecaoEleitoral[]
 
   @@map("zonas_eleitorais")
 }
 
 model SecaoEleitoral {
-  id               String    @id @default(uuid()) @db.Uuid
-  zonaId           String    @map("zona_id") @db.Uuid
-  numeroSecao      Int       @map("numero_secao")
-  localVotacao     String?   @map("local_votacao")
-  endereco         String?
-  eleitoresAptos   Int?      @map("eleitores_aptos")
-  latitude         Float?
-  longitude        Float?
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id             String   @id @default(uuid()) @db.Uuid
+  zonaId         String   @map("zona_id") @db.Uuid
+  numeroSecao    Int      @map("numero_secao")
+  localVotacao   String?  @map("local_votacao")
+  endereco       String?
+  eleitoresAptos Int?     @map("eleitores_aptos")
+  latitude       Float?
+  longitude      Float?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  zona             ZonaEleitoral @relation(fields: [zonaId], references: [id], onDelete: Cascade)
+  zona ZonaEleitoral @relation(fields: [zonaId], references: [id], onDelete: Cascade)
 
   @@map("secoes_eleitorais")
 }
@@ -212,35 +264,37 @@ model SecaoEleitoral {
 // ─── CRM ───────────────────────────────────────────────────
 
 model Pessoa {
-  id                   String   @id @default(uuid()) @db.Uuid
-  fullName             String   @map("full_name")
-  tipoPessoa           String?  @default("pf") @map("tipo_pessoa")
-  cpf                  String?
-  cnpj                 String?
-  razaoSocial          String?  @map("razao_social")
-  nomeFantasia         String?  @map("nome_fantasia")
-  dataNascimento       String?  @map("data_nascimento")
-  genero               String?
-  escolaridade         String?
-  nivelRelacionamento  String   @default("desconhecido") @map("nivel_relacionamento")
-  observacoes          String?
-  score                Int      @default(0)
-  isLideranca          Boolean  @default(false) @map("is_lideranca")
-  liderancaId          String?  @map("lideranca_id") @db.Uuid
-  createdBy            String?  @map("created_by") @db.Uuid
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                  String   @id @default(uuid()) @db.Uuid
+  fullName            String   @map("full_name")
+  tipoPessoa          String?  @default("pf") @map("tipo_pessoa")
+  cpf                 String?
+  cnpj                String?
+  razaoSocial         String?  @map("razao_social")
+  nomeFantasia        String?  @map("nome_fantasia")
+  dataNascimento      String?  @map("data_nascimento")
+  genero              String?
+  escolaridade        String?
+  nivelRelacionamento String   @default("desconhecido") @map("nivel_relacionamento")
+  observacoes         String?
+  score               Int      @default(0)
+  isLideranca         Boolean  @default(false) @map("is_lideranca")
+  liderancaId         String?  @map("lideranca_id") @db.Uuid
+  createdBy           String?  @map("created_by") @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
-  creator              User?    @relation("PessoaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
-  lideranca            Pessoa?  @relation("PessoaLideranca", fields: [liderancaId], references: [id], onDelete: SetNull)
-  votosCaptados        Pessoa[] @relation("PessoaLideranca")
-  demandas             Demanda[] @relation("DemandaPessoa")
+  creator              User?                @relation("PessoaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  lideranca            Pessoa?              @relation("PessoaLideranca", fields: [liderancaId], references: [id], onDelete: SetNull)
+  votosCaptados        Pessoa[]             @relation("PessoaLideranca")
+  demandas             Demanda[]            @relation("DemandaPessoa")
   eventosParticipados  AgendaParticipante[]
   contatos             PessoaContato[]
   enderecos            PessoaEndereco[]
   papeis               PessoaPapel[]
   tags                 PessoaTag[]
   mensagensComunicacao ComunicacaoLog[]
+  tenantId             String               @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("pessoas")
 }
@@ -253,7 +307,9 @@ model PessoaContato {
   principal Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
-  pessoa    Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("pessoas_contatos")
 }
@@ -270,7 +326,9 @@ model PessoaEndereco {
   municipioId String?  @map("municipio_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
-  pessoa      Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("pessoas_enderecos")
 }
@@ -282,7 +340,9 @@ model PessoaPapel {
   ativo     Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
 
-  pessoa    Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("pessoas_papeis")
 }
@@ -294,7 +354,9 @@ model Tag {
   categoria String?
   createdAt DateTime @default(now()) @map("created_at")
 
-  pessoas   PessoaTag[]
+  pessoas  PessoaTag[]
+  tenantId String      @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tags")
 }
@@ -304,8 +366,10 @@ model PessoaTag {
   tagId     String   @map("tag_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
 
-  pessoa    Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
-  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@id([pessoaId, tagId])
   @@map("pessoas_tags")
@@ -314,60 +378,66 @@ model PessoaTag {
 // ─── DEMANDAS ──────────────────────────────────────────────
 
 model Demanda {
-  id                String   @id @default(uuid()) @db.Uuid
-  pessoaId          String?  @map("pessoa_id") @db.Uuid
-  titulo            String
-  descricao         String?
-  status            String   @default("aberta")
-  categoria         String?
-  prioridade        String   @default("media")
-  origem            String?
-  protocolo         String?
-  satisfacaoCidadao Float?   @map("satisfacao_cidadao")
-  resolucaoDescricao String? @map("resolucao_descricao")
-  municipioId       String?  @map("municipio_id") @db.Uuid
-  bairroId          String?  @map("bairro_id") @db.Uuid
-  eixoId            String?  @map("eixo_id") @db.Uuid
-  createdBy         String?  @map("created_by") @db.Uuid
-  atribuidoA        String?  @map("atribuido_a") @db.Uuid
-  dataAbertura      DateTime @default(now()) @map("data_abertura")
-  dataPrazo         DateTime? @map("data_prazo")
-  dataResolucao     DateTime? @map("data_resolucao")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                 String    @id @default(uuid()) @db.Uuid
+  pessoaId           String?   @map("pessoa_id") @db.Uuid
+  titulo             String
+  descricao          String?
+  status             String    @default("aberta")
+  categoria          String?
+  prioridade         String    @default("media")
+  origem             String?
+  protocolo          String?
+  satisfacaoCidadao  Float?    @map("satisfacao_cidadao")
+  resolucaoDescricao String?   @map("resolucao_descricao")
+  municipioId        String?   @map("municipio_id") @db.Uuid
+  bairroId           String?   @map("bairro_id") @db.Uuid
+  eixoId             String?   @map("eixo_id") @db.Uuid
+  createdBy          String?   @map("created_by") @db.Uuid
+  atribuidoA         String?   @map("atribuido_a") @db.Uuid
+  dataAbertura       DateTime  @default(now()) @map("data_abertura")
+  dataPrazo          DateTime? @map("data_prazo")
+  dataResolucao      DateTime? @map("data_resolucao")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  pessoa            Pessoa?   @relation("DemandaPessoa", fields: [pessoaId], references: [id], onDelete: SetNull)
-  creator           User?     @relation("DemandaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
-  atribuido         User?     @relation("DemandaAtribuidaA", fields: [atribuidoA], references: [id], onDelete: SetNull)
-  encaminhamentos   DemandaEncaminhamento[]
-  anexos            DemandaAnexo[]
-  eixoEstrategico   EixoEstrategico? @relation("DemandaEixo", fields: [eixoId], references: [id], onDelete: SetNull)
+  pessoa          Pessoa?                 @relation("DemandaPessoa", fields: [pessoaId], references: [id], onDelete: SetNull)
+  creator         User?                   @relation("DemandaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  atribuido       User?                   @relation("DemandaAtribuidaA", fields: [atribuidoA], references: [id], onDelete: SetNull)
+  encaminhamentos DemandaEncaminhamento[]
+  anexos          DemandaAnexo[]
+  eixoEstrategico EixoEstrategico?        @relation("DemandaEixo", fields: [eixoId], references: [id], onDelete: SetNull)
+  tenantId        String                  @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("demandas")
 }
 
 model DemandaEncaminhamento {
-  id              String   @id @default(uuid()) @db.Uuid
-  demandaId       String   @map("demanda_id") @db.Uuid
-  deUsuarioId     String?  @map("de_usuario_id") @db.Uuid
-  paraUsuarioId   String?  @map("para_usuario_id") @db.Uuid
-  observacao      String?
-  createdAt       DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid()) @db.Uuid
+  demandaId     String   @map("demanda_id") @db.Uuid
+  deUsuarioId   String?  @map("de_usuario_id") @db.Uuid
+  paraUsuarioId String?  @map("para_usuario_id") @db.Uuid
+  observacao    String?
+  createdAt     DateTime @default(now()) @map("created_at")
 
-  demanda         Demanda  @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  demanda  Demanda @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  tenantId String  @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("demandas_encaminhamentos")
 }
 
 model DemandaAnexo {
-  id          String   @id @default(uuid()) @db.Uuid
-  demandaId   String   @map("demanda_id") @db.Uuid
-  arquivoUrl  String   @map("arquivo_url")
-  descricao   String?
-  tipo        String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid()) @db.Uuid
+  demandaId  String   @map("demanda_id") @db.Uuid
+  arquivoUrl String   @map("arquivo_url")
+  descricao  String?
+  tipo       String?
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  demanda     Demanda  @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  demanda  Demanda @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  tenantId String  @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("demandas_anexos")
 }
@@ -375,74 +445,82 @@ model DemandaAnexo {
 // ─── AGENDA ────────────────────────────────────────────────
 
 model Agenda {
-  id                String   @id @default(uuid()) @db.Uuid
-  titulo            String
-  descricao         String?
-  tipo              String
-  dataInicio        DateTime @map("data_inicio")
-  dataFim           DateTime? @map("data_fim")
-  diaInteiro        Boolean  @default(false) @map("dia_inteiro")
-  local             String?
-  municipioId       String?  @map("municipio_id") @db.Uuid
-  bairroId          String?  @map("bairro_id") @db.Uuid
-  latitude          Float?
-  longitude         Float?
-  status            String   @default("agendado")
-  planoAcaoId       String?  @map("plano_acao_id") @db.Uuid
-  responsavelId     String?  @map("responsavel_id") @db.Uuid
-  createdBy         String?  @map("created_by") @db.Uuid
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id            String    @id @default(uuid()) @db.Uuid
+  titulo        String
+  descricao     String?
+  tipo          String
+  dataInicio    DateTime  @map("data_inicio")
+  dataFim       DateTime? @map("data_fim")
+  diaInteiro    Boolean   @default(false) @map("dia_inteiro")
+  local         String?
+  municipioId   String?   @map("municipio_id") @db.Uuid
+  bairroId      String?   @map("bairro_id") @db.Uuid
+  latitude      Float?
+  longitude     Float?
+  status        String    @default("agendado")
+  planoAcaoId   String?   @map("plano_acao_id") @db.Uuid
+  responsavelId String?   @map("responsavel_id") @db.Uuid
+  createdBy     String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  creator           User?    @relation("AgendaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
-  responsavel       User?    @relation("AgendaResponsavelId", fields: [responsavelId], references: [id], onDelete: SetNull)
-  participantes     AgendaParticipante[]
-  checkins          AgendaCheckin[]
-  followups         AgendaFollowup[]
-  planoAcao         PlanoAcao? @relation("AgendaPlanoAcao", fields: [planoAcaoId], references: [id], onDelete: SetNull)
+  creator       User?                @relation("AgendaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  responsavel   User?                @relation("AgendaResponsavelId", fields: [responsavelId], references: [id], onDelete: SetNull)
+  participantes AgendaParticipante[]
+  checkins      AgendaCheckin[]
+  followups     AgendaFollowup[]
+  planoAcao     PlanoAcao?           @relation("AgendaPlanoAcao", fields: [planoAcaoId], references: [id], onDelete: SetNull)
+  tenantId      String               @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("agenda")
 }
 
 model AgendaParticipante {
-  id          String   @id @default(uuid()) @db.Uuid
-  agendaId    String   @map("agenda_id") @db.Uuid
-  pessoaId    String   @map("pessoa_id") @db.Uuid
-  papel       String?
-  confirmado  Boolean  @default(false)
-  compareceu  Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid()) @db.Uuid
+  agendaId   String   @map("agenda_id") @db.Uuid
+  pessoaId   String   @map("pessoa_id") @db.Uuid
+  papel      String?
+  confirmado Boolean  @default(false)
+  compareceu Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  agenda      Agenda   @relation(fields: [agendaId], references: [id], onDelete: Cascade)
-  pessoa      Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  agenda   Agenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  pessoa   Pessoa @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("agenda_participantes")
 }
 
 model AgendaCheckin {
-  id          String   @id @default(uuid()) @db.Uuid
-  agendaId    String   @map("agenda_id") @db.Uuid
-  usuarioId   String?  @map("usuario_id") @db.Uuid
-  tipo        String
-  latitude    Float?
-  longitude   Float?
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid()) @db.Uuid
+  agendaId  String   @map("agenda_id") @db.Uuid
+  usuarioId String?  @map("usuario_id") @db.Uuid
+  tipo      String
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now()) @map("created_at")
 
-  agenda      Agenda   @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  agenda   Agenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("agenda_checkins")
 }
 
 model AgendaFollowup {
-  id            String   @id @default(uuid()) @db.Uuid
-  agendaId      String   @map("agenda_id") @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
+  agendaId      String    @map("agenda_id") @db.Uuid
   descricao     String
-  responsavelId String?  @map("responsavel_id") @db.Uuid
+  responsavelId String?   @map("responsavel_id") @db.Uuid
   prazo         DateTime?
-  concluido     Boolean  @default(false)
-  createdAt     DateTime @default(now()) @map("created_at")
+  concluido     Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
 
-  agenda        Agenda   @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  agenda   Agenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  tenantId String @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("agenda_followups")
 }
@@ -457,50 +535,56 @@ model CentroCusto {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  despesas          Despesa[]
-  receitas          Receita[]
+  despesas Despesa[]
+  receitas Receita[]
+  tenantId String    @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("centros_custo")
 }
 
 model Despesa {
-  id                String   @id @default(uuid()) @db.Uuid
-  descricao         String
-  valor             Float
-  dataDespesa       DateTime @map("data_despesa")
-  categoria         String
-  status            String   @default("pendente")
-  centroCustoId     String?  @map("centro_custo_id") @db.Uuid
-  fornecedorId      String?  @map("fornecedor_id") @db.Uuid
-  documentoTipo     String?  @map("documento_tipo")
-  documentoNumero   String?  @map("documento_numero")
-  comprovanteUrl    String?  @map("comprovante_url")
-  responsavelId     String?  @map("responsavel_id") @db.Uuid
-  planoAcaoId       String?  @map("plano_acao_id") @db.Uuid
-  aprovadorId       String?  @map("aprovador_id") @db.Uuid
-  dataPagamento     DateTime? @map("data_pagamento")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(uuid()) @db.Uuid
+  descricao       String
+  valor           Float
+  dataDespesa     DateTime  @map("data_despesa")
+  categoria       String
+  status          String    @default("pendente")
+  centroCustoId   String?   @map("centro_custo_id") @db.Uuid
+  fornecedorId    String?   @map("fornecedor_id") @db.Uuid
+  documentoTipo   String?   @map("documento_tipo")
+  documentoNumero String?   @map("documento_numero")
+  comprovanteUrl  String?   @map("comprovante_url")
+  responsavelId   String?   @map("responsavel_id") @db.Uuid
+  planoAcaoId     String?   @map("plano_acao_id") @db.Uuid
+  aprovadorId     String?   @map("aprovador_id") @db.Uuid
+  dataPagamento   DateTime? @map("data_pagamento")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  centroCusto       CentroCusto? @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
-  planoAcao         PlanoAcao?   @relation("DespesaPlanoAcao", fields: [planoAcaoId], references: [id], onDelete: SetNull)
+  centroCusto CentroCusto? @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
+  planoAcao   PlanoAcao?   @relation("DespesaPlanoAcao", fields: [planoAcaoId], references: [id], onDelete: SetNull)
+  tenantId    String       @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("despesas")
 }
 
 model Receita {
-  id                String   @id @default(uuid()) @db.Uuid
-  descricao         String?
-  valor             Float
-  dataReceita       DateTime @map("data_receita")
-  tipo              String
-  centroCustoId     String?  @map("centro_custo_id") @db.Uuid
-  origemPessoaId    String?  @map("origem_pessoa_id") @db.Uuid
-  comprovanteUrl    String?  @map("comprovante_url")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid()) @db.Uuid
+  descricao      String?
+  valor          Float
+  dataReceita    DateTime @map("data_receita")
+  tipo           String
+  centroCustoId  String?  @map("centro_custo_id") @db.Uuid
+  origemPessoaId String?  @map("origem_pessoa_id") @db.Uuid
+  comprovanteUrl String?  @map("comprovante_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  centroCusto       CentroCusto? @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
+  centroCusto CentroCusto? @relation(fields: [centroCustoId], references: [id], onDelete: SetNull)
+  tenantId    String       @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("receitas")
 }
@@ -522,7 +606,9 @@ model TseImportJob {
   finishedAt           DateTime? @map("finished_at")
   createdAt            DateTime  @default(now()) @map("created_at")
 
-  logs TseImportLog[]
+  logs     TseImportLog[]
+  tenantId String         @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tse_import_jobs")
 }
@@ -534,7 +620,9 @@ model TseImportLog {
   message   String
   createdAt DateTime @default(now()) @map("created_at")
 
-  job TseImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job      TseImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tenantId String       @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tse_import_logs")
 }
@@ -542,13 +630,15 @@ model TseImportLog {
 // ─── GAMIFICACAO E PONTUACAO ───────────────────────────────
 
 model GamificacaoRegra {
-  id          String   @id @default(uuid()) @db.Uuid
-  acao        String   @unique // ex: 'checkin_agenda', 'demanda_resolvida', 'cadastro_eleitor'
-  pontos      Int      @default(0)
-  descricao   String?
-  ativo       Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid()) @db.Uuid
+  acao      String   @unique // ex: 'checkin_agenda', 'demanda_resolvida', 'cadastro_eleitor'
+  pontos    Int      @default(0)
+  descricao String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  tenantId  String   @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("gamificacao_regras")
 }
@@ -556,35 +646,39 @@ model GamificacaoRegra {
 // ─── OMNICHANNEL E COMUNICACAO ─────────────────────────────
 
 model ComunicacaoCampanha {
-  id          String   @id @default(uuid()) @db.Uuid
-  nome        String
-  tipo        String   @default("whatsapp") // whatsapp, sms, email
-  status      String   @default("draft") // draft, processing, completed, failed
-  filtros     Json?    // os filtros usados na segmentacao para esse envio
-  mensagem    String   // template da mensagem
-  createdBy   String?  @map("created_by") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid()) @db.Uuid
+  nome      String
+  tipo      String   @default("whatsapp") // whatsapp, sms, email
+  status    String   @default("draft") // draft, processing, completed, failed
+  filtros   Json? // os filtros usados na segmentacao para esse envio
+  mensagem  String // template da mensagem
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  logs        ComunicacaoLog[]
+  logs     ComunicacaoLog[]
+  tenantId String           @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("comunicacao_campanhas")
 }
 
 model ComunicacaoLog {
-  id            String   @id @default(uuid()) @db.Uuid
-  pessoaId      String   @map("pessoa_id") @db.Uuid
-  campanhaId    String?  @map("campanha_id") @db.Uuid
-  tipo          String   @default("whatsapp")
-  mensagem      String
-  status        String   @default("pending") // pending, sent, failed, skipped
-  providerId    String?  @map("provider_id") // id retornado pela Evolution API / Twilio
-  errorMsg      String?  @map("error_msg")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid()) @db.Uuid
+  pessoaId   String   @map("pessoa_id") @db.Uuid
+  campanhaId String?  @map("campanha_id") @db.Uuid
+  tipo       String   @default("whatsapp")
+  mensagem   String
+  status     String   @default("pending") // pending, sent, failed, skipped
+  providerId String?  @map("provider_id") // id retornado pela Evolution API / Twilio
+  errorMsg   String?  @map("error_msg")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-  pessoa        Pessoa               @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
-  campanha      ComunicacaoCampanha? @relation(fields: [campanhaId], references: [id], onDelete: SetNull)
+  pessoa   Pessoa               @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  campanha ComunicacaoCampanha? @relation(fields: [campanhaId], references: [id], onDelete: SetNull)
+  tenantId String               @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([pessoaId])
   @@index([campanhaId])
@@ -594,68 +688,74 @@ model ComunicacaoLog {
 // ─── WAR ROOM (PLANEJAMENTO ESTRATÉGICO) ─────────────────
 
 model CampanhaEstrategia {
-  id                String   @id @default(uuid()) @db.Uuid
-  nome              String
-  cargo             String   // prefeito, vereador, deputado
-  ano               Int
-  metaVotos         Int?     @map("meta_votos")
-  orcamentoGlobal   Float?   @map("orcamento_global")
-  dataEleicao       DateTime? @map("data_eleicao")
-  status            String   @default("planejamento") // planejamento, ativa, concluida
-  abrangencia       String   @default("municipal") // nacional, estadual, municipal, zonal
-  estadoId          String?  @map("estado_id") @db.Uuid
-  municipioId       String?  @map("municipio_id") @db.Uuid
-  parentCampanhaId  String?  @map("parent_campanha_id") @db.Uuid
-  createdBy         String?  @map("created_by") @db.Uuid
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  nome             String
+  cargo            String // prefeito, vereador, deputado
+  ano              Int
+  metaVotos        Int?      @map("meta_votos")
+  orcamentoGlobal  Float?    @map("orcamento_global")
+  dataEleicao      DateTime? @map("data_eleicao")
+  status           String    @default("planejamento") // planejamento, ativa, concluida
+  abrangencia      String    @default("municipal") // nacional, estadual, municipal, zonal
+  estadoId         String?   @map("estado_id") @db.Uuid
+  municipioId      String?   @map("municipio_id") @db.Uuid
+  parentCampanhaId String?   @map("parent_campanha_id") @db.Uuid
+  createdBy        String?   @map("created_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  parentCampanha    CampanhaEstrategia?  @relation("SubCampanhas", fields: [parentCampanhaId], references: [id], onDelete: SetNull)
-  subCampanhas      CampanhaEstrategia[] @relation("SubCampanhas")
-  parcerias         CampanhaParceria[]
-  eixos             EixoEstrategico[]
+  parentCampanha CampanhaEstrategia?  @relation("SubCampanhas", fields: [parentCampanhaId], references: [id], onDelete: SetNull)
+  subCampanhas   CampanhaEstrategia[] @relation("SubCampanhas")
+  parcerias      CampanhaParceria[]
+  eixos          EixoEstrategico[]
+  tenantId       String               @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("campanhas_estrategias")
 }
 
 model EixoEstrategico {
-  id                String   @id @default(uuid()) @db.Uuid
-  campanhaId        String   @map("campanha_id") @db.Uuid
-  nome              String   // Saude, Educacao, Infraestrutura
-  descricao         String?
-  cor               String?
-  orcamentoAlocado  Float?   @map("orcamento_alocado")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid()) @db.Uuid
+  campanhaId       String   @map("campanha_id") @db.Uuid
+  nome             String // Saude, Educacao, Infraestrutura
+  descricao        String?
+  cor              String?
+  orcamentoAlocado Float?   @map("orcamento_alocado")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
-  campanha          CampanhaEstrategia @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
-  planosAcao        PlanoAcao[]
-  demandasVinculadas Demanda[] @relation("DemandaEixo")
+  campanha           CampanhaEstrategia @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  planosAcao         PlanoAcao[]
+  demandasVinculadas Demanda[]          @relation("DemandaEixo")
+  tenantId           String             @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("eixos_estrategicos")
 }
 
 model PlanoAcao {
-  id                String   @id @default(uuid()) @db.Uuid
-  eixoId            String   @map("eixo_id") @db.Uuid
+  id                String    @id @default(uuid()) @db.Uuid
+  eixoId            String    @map("eixo_id") @db.Uuid
   titulo            String
   descricao         String?
-  status            String   @default("todo") // todo, doing, done, blocked
+  status            String    @default("todo") // todo, doing, done, blocked
   dataInicio        DateTime? @map("data_inicio")
   dataFim           DateTime? @map("data_fim")
   dataConclusao     DateTime? @map("data_conclusao")
-  orcamentoPrevisto Float?   @map("orcamento_previsto")
-  responsavelId     String?  @map("responsavel_id") @db.Uuid
-  dependeDeId       String?  @map("depende_de_id") @db.Uuid
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  orcamentoPrevisto Float?    @map("orcamento_previsto")
+  responsavelId     String?   @map("responsavel_id") @db.Uuid
+  dependeDeId       String?   @map("depende_de_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  eixo              EixoEstrategico @relation(fields: [eixoId], references: [id], onDelete: Cascade)
-  responsavel       User?           @relation("PlanoAcaoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
-  dependeDe         PlanoAcao?      @relation("DependenciaAcao", fields: [dependeDeId], references: [id], onDelete: SetNull)
-  dependentes       PlanoAcao[]     @relation("DependenciaAcao")
-  agendasVinculadas Agenda[]        @relation("AgendaPlanoAcao")
-  despesasVinculadas Despesa[]      @relation("DespesaPlanoAcao")
+  eixo               EixoEstrategico @relation(fields: [eixoId], references: [id], onDelete: Cascade)
+  responsavel        User?           @relation("PlanoAcaoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+  dependeDe          PlanoAcao?      @relation("DependenciaAcao", fields: [dependeDeId], references: [id], onDelete: SetNull)
+  dependentes        PlanoAcao[]     @relation("DependenciaAcao")
+  agendasVinculadas  Agenda[]        @relation("AgendaPlanoAcao")
+  despesasVinculadas Despesa[]       @relation("DespesaPlanoAcao")
+  tenantId           String          @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("planos_acao")
 }
@@ -671,8 +771,9 @@ model CampanhaParceria {
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
-  campanha              CampanhaEstrategia @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  campanha CampanhaEstrategia @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  tenantId String             @default("00000000-0000-0000-0000-000000000000") @map("tenant_id") @db.Uuid
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("campanhas_parcerias")
 }
-
