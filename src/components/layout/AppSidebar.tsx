@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
   MapPin,
@@ -138,6 +140,27 @@ export function AppSidebar() {
   const { data: profile } = useProfile();
   const isAdmin = useIsAdmin();
 
+  // Buscar configurações de Branding em tempo real
+  const { data: settings = [] } = useQuery({
+    queryKey: ["system-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("system_settings").select("*");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const getSetting = (key: string, defaultValue: string = "") => {
+    const s = settings.find((s: any) => s.key === key);
+    if (!s) return defaultValue;
+    const val = s.value;
+    return typeof val === "string" ? val.replace(/^"|"$/g, "") : String(val);
+  };
+
+  const brandName = getSetting("brand_name", "KIRIBAMBA");
+  const brandNumber = getSetting("brand_number", "70");
+  const brandSubtitle = getSetting("brand_subtitle", "Avante · Dep. Federal");
+
   const initials = (profile?.full_name || "U")
     .split(" ")
     .map((n) => n[0])
@@ -150,13 +173,13 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <div className="brand-number flex h-10 w-10 items-center justify-center rounded-lg text-base shadow-md">
-            70
+            {brandNumber}
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <h2 className="text-sm font-extrabold text-sidebar-foreground leading-tight" style={{ fontFamily: "'Sora', sans-serif" }}>KIRIBAMBA</h2>
-              <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/70 font-semibold">
-                Avante · Dep. Federal
+              <h2 className="text-sm font-extrabold text-sidebar-foreground leading-tight uppercase" style={{ fontFamily: "'Sora', sans-serif" }}>{brandName}</h2>
+              <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/70 font-semibold truncate">
+                {brandSubtitle}
               </p>
             </div>
           )}
