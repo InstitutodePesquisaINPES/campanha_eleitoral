@@ -8,6 +8,7 @@ import { CrmModule } from './modules/crm/crm.module';
 import { DemandasModule } from './modules/demandas/demandas.module';
 import { AgendaModule } from './modules/agenda/agenda.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { FinanceiroModule } from './modules/financeiro/financeiro.module';
     DemandasModule,
     AgendaModule,
     FinanceiroModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

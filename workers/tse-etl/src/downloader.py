@@ -27,6 +27,15 @@ def download_and_extract(tipo: str, ano: int, uf: str, dest_dir: str) -> list[st
             for chunk in r.iter_bytes(chunk_size=8192):
                 f.write(chunk)
                 
+    # Salvar bruto no MinIO (Data Lake)
+    from src.db import upload_to_minio
+    minio_path = f"raw/{tipo}/{ano}/{uf}/{tipo}_{ano}_{uf}.zip"
+    print(f"Enviando {zip_path} para MinIO em tse-bronze/{minio_path}...")
+    try:
+        upload_to_minio(zip_path, "tse-bronze", minio_path)
+    except Exception as e:
+        print(f"Falha ao enviar para MinIO: {e}")
+                
     extracted_files = []
     print(f"Extraindo {zip_path}...")
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
