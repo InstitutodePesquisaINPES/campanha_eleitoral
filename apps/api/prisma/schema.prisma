@@ -223,17 +223,23 @@ model Pessoa {
   escolaridade         String?
   nivelRelacionamento  String   @default("desconhecido") @map("nivel_relacionamento")
   observacoes          String?
+  score                Int      @default(0)
+  isLideranca          Boolean  @default(false) @map("is_lideranca")
+  liderancaId          String?  @map("lideranca_id") @db.Uuid
   createdBy            String?  @map("created_by") @db.Uuid
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   creator              User?    @relation("PessoaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  lideranca            Pessoa?  @relation("PessoaLideranca", fields: [liderancaId], references: [id], onDelete: SetNull)
+  votosCaptados        Pessoa[] @relation("PessoaLideranca")
   demandas             Demanda[] @relation("DemandaPessoa")
   eventosParticipados  AgendaParticipante[]
   contatos             PessoaContato[]
   enderecos            PessoaEndereco[]
   papeis               PessoaPapel[]
   tags                 PessoaTag[]
+  mensagensComunicacao ComunicacaoLog[]
 
   @@map("pessoas")
 }
@@ -526,4 +532,54 @@ model TseImportLog {
   @@map("tse_import_logs")
 }
 
+// ─── GAMIFICACAO E PONTUACAO ───────────────────────────────
 
+model GamificacaoRegra {
+  id          String   @id @default(uuid()) @db.Uuid
+  acao        String   @unique // ex: 'checkin_agenda', 'demanda_resolvida', 'cadastro_eleitor'
+  pontos      Int      @default(0)
+  descricao   String?
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("gamificacao_regras")
+}
+
+// ─── OMNICHANNEL E COMUNICACAO ─────────────────────────────
+
+model ComunicacaoCampanha {
+  id          String   @id @default(uuid()) @db.Uuid
+  nome        String
+  tipo        String   @default("whatsapp") // whatsapp, sms, email
+  status      String   @default("draft") // draft, processing, completed, failed
+  filtros     Json?    // os filtros usados na segmentacao para esse envio
+  mensagem    String   // template da mensagem
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  logs        ComunicacaoLog[]
+
+  @@map("comunicacao_campanhas")
+}
+
+model ComunicacaoLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  pessoaId      String   @map("pessoa_id") @db.Uuid
+  campanhaId    String?  @map("campanha_id") @db.Uuid
+  tipo          String   @default("whatsapp")
+  mensagem      String
+  status        String   @default("pending") // pending, sent, failed, skipped
+  providerId    String?  @map("provider_id") // id retornado pela Evolution API / Twilio
+  errorMsg      String?  @map("error_msg")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  pessoa        Pessoa               @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  campanha      ComunicacaoCampanha? @relation(fields: [campanhaId], references: [id], onDelete: SetNull)
+
+  @@index([pessoaId])
+  @@index([campanhaId])
+  @@map("comunicacao_logs")
+}

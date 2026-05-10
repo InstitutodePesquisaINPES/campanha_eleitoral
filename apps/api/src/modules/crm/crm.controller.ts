@@ -1,11 +1,20 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
 import { CrmService } from './crm.service';
+import { SegmentacaoService } from './segmentacao.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
 @Controller('pessoas')
 export class CrmController {
-  constructor(private readonly crmService: CrmService) {}
+  constructor(
+    private readonly crmService: CrmService,
+    private readonly segmentacaoService: SegmentacaoService
+  ) {}
+
+  @Post('segmentacao')
+  gerarSegmentacao(@Body() filtros: any) {
+    return this.segmentacaoService.gerarAudiencia(filtros);
+  }
 
   @Get()
   findAll(

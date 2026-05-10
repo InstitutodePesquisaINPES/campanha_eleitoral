@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
@@ -9,10 +10,22 @@ import { DemandasModule } from './modules/demandas/demandas.module';
 import { AgendaModule } from './modules/agenda/agenda.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ScoreModule } from './modules/score/score.module';
+import { ComunicacaoModule } from './modules/comunicacao/comunicacao.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        connection: {
+          host: configService.get('REDIS_HOST') || 'localhost',
+          port: configService.get('REDIS_PORT') ? parseInt(configService.get('REDIS_PORT')) : 6379,
+        },
+      }),
+      inject: [ConfigService],
+    }),
     PrismaModule,
     AuthModule,
     HealthModule,
@@ -22,6 +35,8 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     AgendaModule,
     FinanceiroModule,
     DashboardModule,
+    ScoreModule,
+    ComunicacaoModule,
   ],
 })
 export class AppModule {}
