@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { UpsertLiderancaDto, UpdateVereadorDto } from './dto/inteligencia.dto';
 
 @Injectable()
 export class InteligenciaService {
@@ -195,7 +196,7 @@ export class InteligenciaService {
   }
 
   // Lideranças
-  async getLiderancas(tenantId: string, filters: any) {
+  async getLiderancas(tenantId: string, filters: Record<string, string>) {
     return this.prisma.liderancaLocal.findMany({
       where: {
         tenantId,
@@ -246,7 +247,11 @@ export class InteligenciaService {
     return { total: lids.length, porClass, porStatus, porTipo, totalVotos };
   }
 
-  async upsertLideranca(tenantId: string, id: string | undefined, data: any) {
+  async upsertLideranca(
+    tenantId: string,
+    id: string | undefined,
+    data: UpsertLiderancaDto,
+  ) {
     if (id) {
       return this.prisma.liderancaLocal.update({
         where: { id, tenantId },
@@ -316,7 +321,10 @@ export class InteligenciaService {
   }
 
   // Vereadores
-  async getVereadoresHistoricos(tenantId: string, filters: any) {
+  async getVereadoresHistoricos(
+    tenantId: string,
+    filters: Record<string, string>,
+  ) {
     return this.prisma.vereadorHistorico.findMany({
       where: {
         tenantId,
@@ -368,18 +376,19 @@ export class InteligenciaService {
     };
   }
 
-  async updateVereador(tenantId: string, id: string, data: any) {
+  async updateVereador(tenantId: string, id: string, data: UpdateVereadorDto) {
     return this.prisma.vereadorHistorico.update({
       where: { id, tenantId },
       data,
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
   async popularVereadores(
-    tenantId: string,
-    uf: string,
-    ano: number,
-    votosMin: number,
+    _tenantId: string,
+    _uf: string,
+    _ano: number,
+    _votosMin: number,
   ) {
     // Dummy implementation. Will simulate calling RPC or processing
     return 0; // The actual logic would involve importing data

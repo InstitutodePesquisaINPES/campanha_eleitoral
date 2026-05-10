@@ -16,6 +16,15 @@ import {
   CurrentTenant,
   CurrentUser,
 } from '../../common/decorators/tenant.decorator';
+import {
+  CreateAgendaDto,
+  UpdateAgendaDto,
+  CreateParticipanteDto,
+  UpdateParticipanteDto,
+  CreateCheckinDto,
+  CreateFollowupDto,
+  UpdateFollowupDto,
+} from './dto/agenda.dto';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('agenda')
@@ -34,7 +43,7 @@ export class AgendaController {
 
   @Post()
   create(
-    @Body() data: any,
+    @Body() data: CreateAgendaDto,
     @CurrentUser() userId: string,
     @CurrentTenant() tenantId: string,
   ) {
@@ -44,7 +53,7 @@ export class AgendaController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: UpdateAgendaDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.agendaService.update(id, data, tenantId);
@@ -62,14 +71,17 @@ export class AgendaController {
   }
 
   @Post(':id/participantes')
-  createParticipante(@Param('id') id: string, @Body() data: any) {
+  createParticipante(
+    @Param('id') id: string,
+    @Body() data: CreateParticipanteDto,
+  ) {
     return this.agendaService.createParticipante({ ...data, agendaId: id });
   }
 
   @Patch('participantes/:participanteId')
   updateParticipante(
     @Param('participanteId') participanteId: string,
-    @Body() data: any,
+    @Body() data: UpdateParticipanteDto,
   ) {
     return this.agendaService.updateParticipante(participanteId, data);
   }
@@ -88,7 +100,7 @@ export class AgendaController {
   @Post(':id/checkins')
   createCheckin(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: CreateCheckinDto,
     @CurrentUser() userId: string,
   ) {
     return this.agendaService.createCheckin({ ...data, agendaId: id }, userId);
@@ -101,12 +113,15 @@ export class AgendaController {
   }
 
   @Post(':id/followups')
-  createFollowup(@Param('id') id: string, @Body() data: any) {
+  createFollowup(@Param('id') id: string, @Body() data: CreateFollowupDto) {
     return this.agendaService.createFollowup({ ...data, agendaId: id });
   }
 
   @Patch('followups/:followupId')
-  updateFollowup(@Param('followupId') followupId: string, @Body() data: any) {
+  updateFollowup(
+    @Param('followupId') followupId: string,
+    @Body() data: UpdateFollowupDto,
+  ) {
     return this.agendaService.updateFollowup(followupId, data);
   }
 }

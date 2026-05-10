@@ -110,7 +110,10 @@ export class TerritorioService {
     });
   }
 
-  async updateMunicipioStrategy(id: string, payload: UpdateMunicipioStrategyDto) {
+  async updateMunicipioStrategy(
+    id: string,
+    payload: UpdateMunicipioStrategyDto,
+  ) {
     return this.prisma.municipio.update({
       where: { id },
       data: {
@@ -162,8 +165,6 @@ export class TerritorioService {
   }
 
   async getMapaEstrategicoBairros(tenantId: string, municipioId?: string) {
-    const where = municipioId ? { id: municipioId } : {};
-
     // Simplification of the SQL View via Prisma
     const bairros = await this.prisma.bairro.findMany({
       where: {
@@ -200,7 +201,11 @@ export class TerritorioService {
     });
   }
 
-  async createMapaCenario(tenantId: string, userId: string, data: CreateMapaCenarioDto) {
+  async createMapaCenario(
+    tenantId: string,
+    userId: string,
+    data: CreateMapaCenarioDto,
+  ) {
     return this.prisma.mapaCenario.create({
       data: { ...data, tenantId, createdBy: userId },
     });
@@ -223,7 +228,11 @@ export class TerritorioService {
     });
   }
 
-  async createMapaSetor(tenantId: string, userId: string, data: CreateMapaSetorDto) {
+  async createMapaSetor(
+    tenantId: string,
+    userId: string,
+    data: CreateMapaSetorDto,
+  ) {
     return this.prisma.mapaSetor.create({
       data: {
         ...data,
@@ -235,7 +244,11 @@ export class TerritorioService {
     });
   }
 
-  async updateMapaSetor(tenantId: string, id: string, data: UpdateMapaSetorDto) {
+  async updateMapaSetor(
+    tenantId: string,
+    id: string,
+    data: UpdateMapaSetorDto,
+  ) {
     return this.prisma.mapaSetor.update({
       where: { id, tenantId },
       data,

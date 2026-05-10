@@ -1,5 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  CreateDemandaDto,
+  UpdateDemandaDto,
+  CreateEncaminhamentoDto,
+  CreateAnexoDto,
+} from './dto/demandas.dto';
 
 @Injectable()
 export class DemandasService {
@@ -116,7 +122,7 @@ export class DemandasService {
     return demanda;
   }
 
-  async create(data: any, userId: string, tenantId: string) {
+  async create(data: CreateDemandaDto, userId: string, tenantId: string) {
     return this.prisma.demanda.create({
       data: {
         ...data,
@@ -127,7 +133,7 @@ export class DemandasService {
     });
   }
 
-  async update(id: string, data: any, tenantId: string) {
+  async update(id: string, data: UpdateDemandaDto, tenantId: string) {
     await this.findOne(id, tenantId); // Assert ownership
     return this.prisma.demanda.update({
       where: { id },
@@ -150,7 +156,10 @@ export class DemandasService {
     });
   }
 
-  async createEncaminhamento(data: any, userId: string) {
+  async createEncaminhamento(
+    data: CreateEncaminhamentoDto & { demandaId: string },
+    userId: string,
+  ) {
     return this.prisma.demandaEncaminhamento.create({
       data: { ...data, deUsuarioId: userId },
     });
@@ -164,7 +173,7 @@ export class DemandasService {
     });
   }
 
-  async createAnexo(data: any) {
+  async createAnexo(data: CreateAnexoDto & { demandaId: string }) {
     return this.prisma.demandaAnexo.create({ data });
   }
 }

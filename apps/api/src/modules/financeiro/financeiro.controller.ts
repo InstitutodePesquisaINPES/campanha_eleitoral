@@ -16,6 +16,12 @@ import {
   CurrentTenant,
   CurrentUser,
 } from '../../common/decorators/tenant.decorator';
+import {
+  CreateCentroCustoDto,
+  CreateDespesaDto,
+  UpdateDespesaDto,
+  CreateReceitaDto,
+} from './dto/financeiro.dto';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('financeiro')
@@ -29,7 +35,10 @@ export class FinanceiroController {
   }
 
   @Post('centros-custo')
-  createCentroCusto(@Body() data: any, @CurrentTenant() tenantId: string) {
+  createCentroCusto(
+    @Body() data: CreateCentroCustoDto,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.financeiroService.createCentroCusto(data, tenantId);
   }
 
@@ -52,7 +61,7 @@ export class FinanceiroController {
 
   @Post('despesas')
   createDespesa(
-    @Body() data: any,
+    @Body() data: CreateDespesaDto,
     @CurrentUser() userId: string,
     @CurrentTenant() tenantId: string,
   ) {
@@ -62,7 +71,7 @@ export class FinanceiroController {
   @Patch('despesas/:id')
   updateDespesa(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: UpdateDespesaDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.financeiroService.updateDespesa(id, data, tenantId);
@@ -83,7 +92,10 @@ export class FinanceiroController {
   }
 
   @Post('receitas')
-  createReceita(@Body() data: any, @CurrentTenant() tenantId: string) {
+  createReceita(
+    @Body() data: CreateReceitaDto,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.financeiroService.createReceita(data, tenantId);
   }
 

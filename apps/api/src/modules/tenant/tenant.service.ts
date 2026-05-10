@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TenantService {
@@ -67,8 +68,15 @@ export class TenantService {
   async updateSettings(tenantId: string, data: any) {
     return this.prisma.tenantSettings.upsert({
       where: { tenantId },
-      create: { ...data, tenantId },
-      update: data,
+      create: {
+        ...data,
+        tenantId,
+        themeConfig: data.themeConfig,
+      },
+      update: {
+        ...data,
+        themeConfig: data.themeConfig,
+      },
     });
   }
 }

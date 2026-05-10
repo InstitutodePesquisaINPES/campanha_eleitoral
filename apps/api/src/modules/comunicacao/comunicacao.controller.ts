@@ -10,17 +10,30 @@ import {
   Request,
 } from '@nestjs/common';
 import { ComunicacaoService } from './comunicacao.service';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { CurrentTenant } from '../../common/decorators/tenant.decorator';
+import type { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
+import {
+  CreatePautaDto,
+  UpdatePautaDto,
+  CreatePecaDto,
+  UpdatePecaDto,
+  CreateMencaoDto,
+  UpdateMencaoDto,
+} from './dto/comunicacao.dto';
 
-@UseGuards(AuthGuard('jwt'), TenantGuard)
+@UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('comunicacao')
 export class ComunicacaoController {
   constructor(private readonly comunicacaoService: ComunicacaoService) {}
 
   @Post('enviar/massa')
-  enviarEmMassa(@Body('campanhaId') campanhaId: string, @Request() req: any) {
-    return this.comunicacaoService.enviarEmMassa(campanhaId, req.tenantId);
+  enviarEmMassa(
+    @Body('campanhaId') campanhaId: string,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.comunicacaoService.enviarEmMassa(campanhaId, tenantId);
   }
 
   @Post('enviar/individual')
@@ -28,88 +41,107 @@ export class ComunicacaoController {
     @Body('pessoaId') pessoaId: string,
     @Body('mensagem') mensagem: string,
     @Body('tipo') tipo: string,
-    @Request() req: any,
+    @CurrentTenant() tenantId: string,
   ) {
     return this.comunicacaoService.disparoIndividual(
       pessoaId,
       mensagem,
       tipo,
-      req.tenantId,
+      tenantId,
     );
   }
 
   // --- Pautas ---
   @Get('pautas')
-  async getPautas(@Request() req: any) {
-    return this.comunicacaoService.getPautas(req.tenantId);
+  async getPautas(@CurrentTenant() tenantId: string) {
+    return this.comunicacaoService.getPautas(tenantId);
   }
 
   @Post('pautas')
-  async createPauta(@Request() req: any, @Body() body: any) {
-    return this.comunicacaoService.createPauta(req.tenantId, body);
+  async createPauta(
+    @CurrentTenant() tenantId: string,
+    @Body() body: CreatePautaDto,
+  ) {
+    return this.comunicacaoService.createPauta(tenantId, body);
   }
 
   @Put('pautas/:id')
   async updatePauta(
-    @Request() req: any,
+    @CurrentTenant() tenantId: string,
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: UpdatePautaDto,
   ) {
-    return this.comunicacaoService.updatePauta(req.tenantId, id, body);
+    return this.comunicacaoService.updatePauta(tenantId, id, body);
   }
 
   @Delete('pautas/:id')
-  async deletePauta(@Request() req: any, @Param('id') id: string) {
-    return this.comunicacaoService.deletePauta(req.tenantId, id);
+  async deletePauta(
+    @CurrentTenant() tenantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.comunicacaoService.deletePauta(tenantId, id);
   }
 
   // --- Peças ---
   @Get('pecas')
-  async getPecas(@Request() req: any) {
-    return this.comunicacaoService.getPecas(req.tenantId);
+  async getPecas(@CurrentTenant() tenantId: string) {
+    return this.comunicacaoService.getPecas(tenantId);
   }
 
   @Post('pecas')
-  async createPeca(@Request() req: any, @Body() body: any) {
-    return this.comunicacaoService.createPeca(req.tenantId, body);
+  async createPeca(
+    @CurrentTenant() tenantId: string,
+    @Request() req: AuthenticatedRequest,
+    @Body() body: CreatePecaDto,
+  ) {
+    return this.comunicacaoService.createPeca(tenantId, {
+      ...body,
+      createdBy: req.user.sub,
+    });
   }
 
   @Put('pecas/:id')
   async updatePeca(
-    @Request() req: any,
+    @CurrentTenant() tenantId: string,
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: UpdatePecaDto,
   ) {
-    return this.comunicacaoService.updatePeca(req.tenantId, id, body);
+    return this.comunicacaoService.updatePeca(tenantId, id, body);
   }
 
   @Delete('pecas/:id')
-  async deletePeca(@Request() req: any, @Param('id') id: string) {
-    return this.comunicacaoService.deletePeca(req.tenantId, id);
+  async deletePeca(@CurrentTenant() tenantId: string, @Param('id') id: string) {
+    return this.comunicacaoService.deletePeca(tenantId, id);
   }
 
   // --- Menções ---
   @Get('mencoes')
-  async getMencoes(@Request() req: any) {
-    return this.comunicacaoService.getMencoes(req.tenantId);
+  async getMencoes(@CurrentTenant() tenantId: string) {
+    return this.comunicacaoService.getMencoes(tenantId);
   }
 
   @Post('mencoes')
-  async createMencao(@Request() req: any, @Body() body: any) {
-    return this.comunicacaoService.createMencao(req.tenantId, body);
+  async createMencao(
+    @CurrentTenant() tenantId: string,
+    @Body() body: CreateMencaoDto,
+  ) {
+    return this.comunicacaoService.createMencao(tenantId, body);
   }
 
   @Put('mencoes/:id')
   async updateMencao(
-    @Request() req: any,
+    @CurrentTenant() tenantId: string,
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: UpdateMencaoDto,
   ) {
-    return this.comunicacaoService.updateMencao(req.tenantId, id, body);
+    return this.comunicacaoService.updateMencao(tenantId, id, body);
   }
 
   @Delete('mencoes/:id')
-  async deleteMencao(@Request() req: any, @Param('id') id: string) {
-    return this.comunicacaoService.deleteMencao(req.tenantId, id);
+  async deleteMencao(
+    @CurrentTenant() tenantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.comunicacaoService.deleteMencao(tenantId, id);
   }
 }

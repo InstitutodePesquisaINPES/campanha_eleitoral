@@ -2,6 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  CreatePautaDto,
+  UpdatePautaDto,
+  CreatePecaDto,
+  UpdatePecaDto,
+  CreateMencaoDto,
+  UpdateMencaoDto,
+} from './dto/comunicacao.dto';
 
 @Injectable()
 export class ComunicacaoService {
@@ -96,11 +104,11 @@ export class ComunicacaoService {
     });
   }
 
-  async createPauta(tenantId: string, data: any) {
+  async createPauta(tenantId: string, data: CreatePautaDto) {
     return this.prisma.comunicacaoPauta.create({ data: { ...data, tenantId } });
   }
 
-  async updatePauta(tenantId: string, id: string, data: any) {
+  async updatePauta(tenantId: string, id: string, data: UpdatePautaDto) {
     return this.prisma.comunicacaoPauta.update({
       where: { id, tenantId },
       data,
@@ -116,11 +124,14 @@ export class ComunicacaoService {
     return this.prisma.comunicacaoPeca.findMany({ where: { tenantId } });
   }
 
-  async createPeca(tenantId: string, data: any) {
+  async createPeca(
+    tenantId: string,
+    data: CreatePecaDto & { createdBy: string },
+  ) {
     return this.prisma.comunicacaoPeca.create({ data: { ...data, tenantId } });
   }
 
-  async updatePeca(tenantId: string, id: string, data: any) {
+  async updatePeca(tenantId: string, id: string, data: UpdatePecaDto) {
     return this.prisma.comunicacaoPeca.update({
       where: { id, tenantId },
       data,
@@ -136,13 +147,13 @@ export class ComunicacaoService {
     return this.prisma.comunicacaoMencao.findMany({ where: { tenantId } });
   }
 
-  async createMencao(tenantId: string, data: any) {
+  async createMencao(tenantId: string, data: CreateMencaoDto) {
     return this.prisma.comunicacaoMencao.create({
       data: { ...data, tenantId },
     });
   }
 
-  async updateMencao(tenantId: string, id: string, data: any) {
+  async updateMencao(tenantId: string, id: string, data: UpdateMencaoDto) {
     return this.prisma.comunicacaoMencao.update({
       where: { id, tenantId },
       data,

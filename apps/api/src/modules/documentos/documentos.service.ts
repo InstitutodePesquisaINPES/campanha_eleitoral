@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CreateDocumentoDto } from './dto/documentos.dto';
 
 @Injectable()
 export class DocumentosService {
@@ -13,7 +14,7 @@ export class DocumentosService {
     });
   }
 
-  async createDocumento(data: any, tenantId: string) {
+  async createDocumento(data: CreateDocumentoDto, tenantId: string) {
     return this.prisma.documento.create({
       data: {
         ...data,

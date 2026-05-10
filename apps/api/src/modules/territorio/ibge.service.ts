@@ -32,11 +32,13 @@ export class IbgeService {
 
     try {
       // 1. Sincronizar Estados
-      const resEstados = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados');
+      const resEstados = await fetch(
+        'https://servicodados.ibge.gov.br/api/v1/localidades/estados',
+      );
       if (!resEstados.ok) throw new Error('Falha ao buscar estados do IBGE');
-      const estados: IbgeEstado[] = await resEstados.json() as IbgeEstado[];
+      const estados: IbgeEstado[] = (await resEstados.json()) as IbgeEstado[];
 
-      const estadosMapeados = estados.map(est => ({
+      const estadosMapeados = estados.map((est) => ({
         nome: est.nome,
         sigla: est.sigla,
         geocodigoIbge: est.id.toString(),
@@ -54,12 +56,16 @@ export class IbgeService {
 
       // Recupera o dicionário de Estados por sigla para associar aos municípios
       const dbEstados = await this.prisma.estado.findMany();
-      const estadoMap = new Map(dbEstados.map(e => [e.sigla, e.id]));
+      const estadoMap = new Map(dbEstados.map((e) => [e.sigla, e.id]));
 
       // 2. Sincronizar Municípios
-      const resMunicipios = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios');
-      if (!resMunicipios.ok) throw new Error('Falha ao buscar municípios do IBGE');
-      const municipios: IbgeMunicipio[] = await resMunicipios.json() as IbgeMunicipio[];
+      const resMunicipios = await fetch(
+        'https://servicodados.ibge.gov.br/api/v1/localidades/municipios',
+      );
+      if (!resMunicipios.ok)
+        throw new Error('Falha ao buscar municípios do IBGE');
+      const municipios: IbgeMunicipio[] =
+        (await resMunicipios.json()) as IbgeMunicipio[];
 
       let countMunicipiosCriados = 0;
 
@@ -72,7 +78,7 @@ export class IbgeService {
 
         const existe = await this.prisma.municipio.findUnique({
           where: { geocodigoIbge: geocodigo },
-          select: { id: true }
+          select: { id: true },
         });
 
         if (!existe) {
@@ -81,15 +87,20 @@ export class IbgeService {
               nome: mun.nome,
               estadoId: estadoId,
               geocodigoIbge: geocodigo,
-            }
+            },
           });
           countMunicipiosCriados++;
         }
       }
 
-      this.logger.log(`Sincronização concluída. ${countMunicipiosCriados} novos municípios cadastrados.`);
-      return { success: true, countMunicipiosCriados, estadosAtualizados: estados.length };
-
+      this.logger.log(
+        `Sincronização concluída. ${countMunicipiosCriados} novos municípios cadastrados.`,
+      );
+      return {
+        success: true,
+        countMunicipiosCriados,
+        estadosAtualizados: estados.length,
+      };
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error('Erro na sincronização IBGE', err.message);

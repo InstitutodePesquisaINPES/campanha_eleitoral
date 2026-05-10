@@ -1219,7 +1219,7 @@ model Documento {
   id            String   @id @default(uuid())
   tenantId      String   @db.Uuid
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  pessoaId      String
+  pessoaId      String?
   arquivoUrl    String
   tipoDocumento String?
   descricao     String?

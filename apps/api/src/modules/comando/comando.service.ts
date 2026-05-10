@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  CreateReuniaoDto,
+  UpdateReuniaoDto,
+  CreateDeliberacaoDto,
+} from './dto/comando.dto';
 
 @Injectable()
 export class ComandoService {
@@ -83,13 +88,13 @@ export class ComandoService {
     });
   }
 
-  async createReuniao(data: any, tenantId: string) {
+  async createReuniao(data: CreateReuniaoDto, tenantId: string) {
     return this.prisma.reuniao.create({
       data: { ...data, tenantId },
     });
   }
 
-  async updateReuniao(id: string, data: any, tenantId: string) {
+  async updateReuniao(id: string, data: UpdateReuniaoDto, tenantId: string) {
     return this.prisma.reuniao.update({
       where: { id, tenantId },
       data,
@@ -104,7 +109,7 @@ export class ComandoService {
     });
   }
 
-  async createDeliberacao(data: any, tenantId: string) {
+  async createDeliberacao(data: CreateDeliberacaoDto, tenantId: string) {
     return this.prisma.reuniaoDeliberacao.create({
       data: { ...data, tenantId },
     });

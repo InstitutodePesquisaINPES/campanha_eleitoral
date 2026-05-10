@@ -15,6 +15,15 @@ import {
   CurrentTenant,
   CurrentUser,
 } from '../../common/decorators/tenant.decorator';
+import {
+  CreateCampanhaDto,
+  UpdateCampanhaDto,
+  CreateEixoDto,
+  UpdateEixoDto,
+  CreatePlanoAcaoDto,
+  UpdatePlanoAcaoDto,
+  CreateParceriaDto,
+} from './dto/strategy.dto';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('strategy')
@@ -23,7 +32,7 @@ export class StrategyController {
 
   @Post('campanhas')
   createCampanha(
-    @Body() data: any,
+    @Body() data: CreateCampanhaDto,
     @CurrentUser() userId: string,
     @CurrentTenant() tenantId: string,
   ) {
@@ -38,7 +47,7 @@ export class StrategyController {
   @Post('campanhas/:id/eixos')
   createEixo(
     @Param('id') campanhaId: string,
-    @Body() data: any,
+    @Body() data: CreateEixoDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.strategyService.createEixo(campanhaId, data, tenantId);
@@ -47,7 +56,7 @@ export class StrategyController {
   @Post('campanhas/:id/parcerias')
   createParceria(
     @Param('id') campanhaId: string,
-    @Body() data: any,
+    @Body() data: CreateParceriaDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.strategyService.createParceria(campanhaId, data, tenantId);
@@ -56,7 +65,7 @@ export class StrategyController {
   @Post('eixos/:eixoId/planos')
   createPlanoAcao(
     @Param('eixoId') eixoId: string,
-    @Body() data: any,
+    @Body() data: CreatePlanoAcaoDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.strategyService.createPlanoAcao(eixoId, data, tenantId);
@@ -81,7 +90,7 @@ export class StrategyController {
   @Patch('campanhas/:id')
   updateCampanha(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: UpdateCampanhaDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.strategyService.updateCampanha(id, data, tenantId);
@@ -95,7 +104,7 @@ export class StrategyController {
   @Patch('eixos/:id')
   updateEixo(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: UpdateEixoDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.strategyService.updateEixo(id, data, tenantId);
@@ -109,7 +118,7 @@ export class StrategyController {
   @Patch('planos/:id')
   updatePlanoAcao(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: UpdatePlanoAcaoDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.strategyService.updatePlanoAcao(id, data, tenantId);

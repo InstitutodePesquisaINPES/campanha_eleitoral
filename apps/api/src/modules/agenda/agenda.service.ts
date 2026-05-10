@@ -1,5 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  CreateAgendaDto,
+  UpdateAgendaDto,
+  CreateParticipanteDto,
+  UpdateParticipanteDto,
+  CreateCheckinDto,
+  CreateFollowupDto,
+  UpdateFollowupDto,
+} from './dto/agenda.dto';
 
 @Injectable()
 export class AgendaService {
@@ -47,7 +56,7 @@ export class AgendaService {
     return evento;
   }
 
-  async create(data: any, userId: string, tenantId: string) {
+  async create(data: CreateAgendaDto, userId: string, tenantId: string) {
     return this.prisma.agenda.create({
       data: {
         ...data,
@@ -57,7 +66,7 @@ export class AgendaService {
     });
   }
 
-  async update(id: string, data: any, tenantId: string) {
+  async update(id: string, data: UpdateAgendaDto, tenantId: string) {
     await this.findOne(id, tenantId); // Assert ownership
     return this.prisma.agenda.update({
       where: { id },
@@ -81,11 +90,11 @@ export class AgendaService {
     });
   }
 
-  async createParticipante(data: any) {
+  async createParticipante(data: CreateParticipanteDto & { agendaId: string }) {
     return this.prisma.agendaParticipante.create({ data });
   }
 
-  async updateParticipante(id: string, data: any) {
+  async updateParticipante(id: string, data: UpdateParticipanteDto) {
     return this.prisma.agendaParticipante.update({ where: { id }, data });
   }
 
@@ -101,7 +110,10 @@ export class AgendaService {
     });
   }
 
-  async createCheckin(data: any, userId: string) {
+  async createCheckin(
+    data: CreateCheckinDto & { agendaId: string },
+    userId: string,
+  ) {
     return this.prisma.agendaCheckin.create({
       data: { ...data, usuarioId: userId },
     });
@@ -115,11 +127,11 @@ export class AgendaService {
     });
   }
 
-  async createFollowup(data: any) {
+  async createFollowup(data: CreateFollowupDto & { agendaId: string }) {
     return this.prisma.agendaFollowup.create({ data });
   }
 
-  async updateFollowup(id: string, data: any) {
+  async updateFollowup(id: string, data: UpdateFollowupDto) {
     return this.prisma.agendaFollowup.update({ where: { id }, data });
   }
 }

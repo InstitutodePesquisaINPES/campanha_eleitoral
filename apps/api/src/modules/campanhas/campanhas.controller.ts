@@ -105,7 +105,10 @@ export class CampanhasController {
   }
 
   @Delete('tarefas/:id')
-  async deleteTarefa(@CurrentTenant() tenantId: string, @Param('id') id: string) {
+  async deleteTarefa(
+    @CurrentTenant() tenantId: string,
+    @Param('id') id: string,
+  ) {
     return this.campanhasService.deleteTarefa(tenantId, id);
   }
 
@@ -163,7 +166,10 @@ export class CampanhasController {
   }
 
   @Delete('semanas/:id')
-  async deleteSemana(@CurrentTenant() tenantId: string, @Param('id') id: string) {
+  async deleteSemana(
+    @CurrentTenant() tenantId: string,
+    @Param('id') id: string,
+  ) {
     return this.campanhasService.deleteSemana(tenantId, id);
   }
 }

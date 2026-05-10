@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  CreateMaterialDto,
+  CreateEstoqueDto,
+  CreateMovimentacaoDto,
+} from './dto/materiais.dto';
 
 @Injectable()
 export class MateriaisService {
@@ -13,7 +18,7 @@ export class MateriaisService {
     });
   }
 
-  async createMaterial(data: any, tenantId: string) {
+  async createMaterial(data: CreateMaterialDto, tenantId: string) {
     return this.prisma.material.create({
       data: { ...data, tenantId },
     });
@@ -37,7 +42,7 @@ export class MateriaisService {
     });
   }
 
-  async createEstoque(data: any, tenantId: string) {
+  async createEstoque(data: CreateEstoqueDto, tenantId: string) {
     return this.prisma.estoque.create({
       data: { ...data, tenantId },
     });
@@ -51,7 +56,10 @@ export class MateriaisService {
     });
   }
 
-  async createMovimentacao(data: any, tenantId: string) {
+  async createMovimentacao(
+    data: CreateMovimentacaoDto & { responsavelId?: string },
+    tenantId: string,
+  ) {
     // Registra a movimentacao e atualiza o estoque
     return this.prisma.$transaction(async (tx) => {
       const estoque = await tx.estoque.findFirst({

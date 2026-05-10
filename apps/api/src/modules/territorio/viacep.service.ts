@@ -30,16 +30,16 @@ export class ViaCepService {
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
       if (!response.ok) throw new Error('Falha na requisição ao ViaCEP');
-      
-      const data: ViaCepResponse = await response.json() as ViaCepResponse;
-      
+
+      const data: ViaCepResponse = (await response.json()) as ViaCepResponse;
+
       if (data.erro) {
         throw new NotFoundException('CEP não encontrado');
       }
 
       // Garante que o Estado existe
       let estado = await this.prisma.estado.findUnique({
-        where: { sigla: data.uf }
+        where: { sigla: data.uf },
       });
 
       if (!estado) {
@@ -47,13 +47,13 @@ export class ViaCepService {
           data: {
             nome: data.uf, // ViaCEP não retorna nome do estado, apenas UF
             sigla: data.uf,
-          }
+          },
         });
       }
 
       // Garante que o Município existe
       let municipio = await this.prisma.municipio.findUnique({
-        where: { geocodigoIbge: data.ibge }
+        where: { geocodigoIbge: data.ibge },
       });
 
       if (!municipio) {
@@ -62,7 +62,7 @@ export class ViaCepService {
             nome: data.localidade,
             estadoId: estado.id,
             geocodigoIbge: data.ibge,
-          }
+          },
         });
       }
 
@@ -73,10 +73,10 @@ export class ViaCepService {
           where: {
             nome: {
               equals: data.bairro,
-              mode: 'insensitive' // Busca ignorando case
+              mode: 'insensitive', // Busca ignorando case
             },
-            municipioId: municipio.id
-          }
+            municipioId: municipio.id,
+          },
         });
 
         if (!bairro) {
@@ -84,7 +84,7 @@ export class ViaCepService {
             data: {
               nome: data.bairro,
               municipioId: municipio.id,
-            }
+            },
           });
         }
       }
@@ -95,10 +95,13 @@ export class ViaCepService {
         logradouro: data.logradouro,
         complemento: data.complemento,
         bairro: bairro ? { id: bairro.id, nome: bairro.nome } : null,
-        municipio: { id: municipio.id, nome: municipio.nome, geocodigoIbge: municipio.geocodigoIbge },
+        municipio: {
+          id: municipio.id,
+          nome: municipio.nome,
+          geocodigoIbge: municipio.geocodigoIbge,
+        },
         estado: { id: estado.id, sigla: estado.sigla, nome: estado.nome },
       };
-
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error(`Erro ao consultar CEP ${cep}:`, err.message);

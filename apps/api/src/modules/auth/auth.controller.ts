@@ -8,28 +8,8 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { IsEmail, IsString, MinLength } from 'class-validator';
-
-class RegisterDto {
-  @IsEmail()
-  email!: string;
-
-  @IsString()
-  @MinLength(6)
-  password!: string;
-
-  @IsString()
-  @MinLength(2)
-  fullName!: string;
-}
-
-class LoginDto {
-  @IsEmail()
-  email!: string;
-
-  @IsString()
-  password!: string;
-}
+import { RegisterDto, LoginDto } from './dto/auth.dto';
+import type { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -47,7 +27,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  getProfile(@Request() req: any) {
+  getProfile(@Request() req: AuthenticatedRequest) {
     return this.auth.getProfile(req.user.sub);
   }
 }

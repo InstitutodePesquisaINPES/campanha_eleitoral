@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CreateRoteiroDto } from './dto/campo.dto';
 
 @Injectable()
 export class CampoService {
@@ -17,7 +18,7 @@ export class CampoService {
     });
   }
 
-  async createRoteiro(data: any, tenantId: string) {
+  async createRoteiro(data: CreateRoteiroDto, tenantId: string) {
     return this.prisma.roteiroVisita.create({
       data: {
         ...data,

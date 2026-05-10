@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  UpsertPesquisaDto,
+  UpsertResultadoDto,
+  UpsertDoadorDto,
+} from './dto/pesquisas.dto';
 
 @Injectable()
 export class PesquisasService {
@@ -20,7 +25,11 @@ export class PesquisasService {
     return pesquisas;
   }
 
-  async upsertPesquisa(tenantId: string, id: string | undefined, data: any) {
+  async upsertPesquisa(
+    tenantId: string,
+    id: string | undefined,
+    data: UpsertPesquisaDto,
+  ) {
     if (id) {
       return this.prisma.pesquisa.update({
         where: { id, tenantId },
@@ -33,7 +42,11 @@ export class PesquisasService {
     }
   }
 
-  async upsertResultado(tenantId: string, id: string | undefined, data: any) {
+  async upsertResultado(
+    tenantId: string,
+    id: string | undefined,
+    data: UpsertResultadoDto,
+  ) {
     if (id) {
       return this.prisma.pesquisaResultado.update({
         where: { id, tenantId },
@@ -53,7 +66,11 @@ export class PesquisasService {
     });
   }
 
-  async upsertDoador(tenantId: string, id: string | undefined, data: any) {
+  async upsertDoador(
+    tenantId: string,
+    id: string | undefined,
+    data: UpsertDoadorDto,
+  ) {
     if (id) {
       return this.prisma.captacaoDoador.update({
         where: { id, tenantId },

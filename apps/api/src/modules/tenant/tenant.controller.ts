@@ -13,6 +13,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import {
+  CreateTenantDto,
+  UpdateTenantDto,
+  UpdateTenantSettingsDto,
+} from './dto/tenant.dto';
 
 /**
  * Rotas de gestão de Tenants/Workspaces.
@@ -34,7 +39,7 @@ export class TenantController {
   /** POST /tenants — Cria um novo Workspace/Campanha (Pode ser aberto ou super-admin) */
   @Post()
   @Roles('super-admin')
-  create(@Body() body: { name: string; slug: string }) {
+  create(@Body() body: CreateTenantDto) {
     return this.tenantService.create(body.name, body.slug);
   }
 
@@ -48,10 +53,7 @@ export class TenantController {
   /** PATCH /tenants/:id — Atualiza nome ou status */
   @Patch(':id')
   @Roles('super-admin')
-  update(
-    @Param('id') id: string,
-    @Body() body: { name?: string; active?: boolean },
-  ) {
+  update(@Param('id') id: string, @Body() body: UpdateTenantDto) {
     return this.tenantService.update(id, body);
   }
 
@@ -73,7 +75,10 @@ export class TenantController {
 
   @Patch('settings/current')
   @Roles('admin')
-  updateSettings(@CurrentTenant() tenantId: string, @Body() body: any) {
+  updateSettings(
+    @CurrentTenant() tenantId: string,
+    @Body() body: UpdateTenantSettingsDto,
+  ) {
     if (!tenantId) throw new UnauthorizedException('TenantId não identificado');
     return this.tenantService.updateSettings(tenantId, body);
   }

@@ -14,6 +14,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
 import { Request } from '@nestjs/common';
+import type { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
+import { UpsertLiderancaDto, UpdateVereadorDto } from './dto/inteligencia.dto';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('inteligencia')
@@ -37,7 +39,10 @@ export class InteligenciaController {
 
   // Lideranças
   @Get('liderancas')
-  getLiderancas(@CurrentTenant() tenantId: string, @Query() filters: any) {
+  getLiderancas(
+    @CurrentTenant() tenantId: string,
+    @Query() filters: Record<string, string>,
+  ) {
     return this.inteligenciaService.getLiderancas(tenantId, filters);
   }
 
@@ -50,7 +55,10 @@ export class InteligenciaController {
   }
 
   @Post('liderancas')
-  createLideranca(@CurrentTenant() tenantId: string, @Body() payload: any) {
+  createLideranca(
+    @CurrentTenant() tenantId: string,
+    @Body() payload: UpsertLiderancaDto,
+  ) {
     return this.inteligenciaService.upsertLideranca(
       tenantId,
       undefined,
@@ -62,7 +70,7 @@ export class InteligenciaController {
   updateLideranca(
     @CurrentTenant() tenantId: string,
     @Param('id') id: string,
-    @Body() payload: any,
+    @Body() payload: UpsertLiderancaDto,
   ) {
     return this.inteligenciaService.upsertLideranca(tenantId, id, payload);
   }
@@ -71,11 +79,11 @@ export class InteligenciaController {
   promoverLideranca(
     @CurrentTenant() tenantId: string,
     @Param('id') id: string,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.inteligenciaService.promoverLiderancaParaCRM(
       tenantId,
-      req.user.userId,
+      req.user.sub,
       id,
     );
   }
@@ -87,7 +95,10 @@ export class InteligenciaController {
 
   // Vereadores
   @Get('vereadores')
-  getVereadores(@CurrentTenant() tenantId: string, @Query() filters: any) {
+  getVereadores(
+    @CurrentTenant() tenantId: string,
+    @Query() filters: Record<string, string>,
+  ) {
     return this.inteligenciaService.getVereadoresHistoricos(tenantId, filters);
   }
 
@@ -108,7 +119,7 @@ export class InteligenciaController {
   updateVereador(
     @CurrentTenant() tenantId: string,
     @Param('id') id: string,
-    @Body() payload: any,
+    @Body() payload: UpdateVereadorDto,
   ) {
     return this.inteligenciaService.updateVereador(tenantId, id, payload);
   }

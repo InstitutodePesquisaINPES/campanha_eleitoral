@@ -17,8 +17,8 @@ export class ScoreService {
       // Olhando o schema não vi `tenantId` em `GamificacaoRegra` se ela existir.
       // Vou assumir que ela tem tenantId se for adicionada.
       // Correção: Vou tentar com tenantId.
-      const regra: any = await this.prisma.gamificacaoRegra.findFirst({
-        where: { acao, tenantId } as any,
+      const regra = await this.prisma.gamificacaoRegra.findFirst({
+        where: { acao, tenantId },
       });
 
       if (!regra || !regra.ativo || regra.pontos === 0) {
@@ -27,7 +27,7 @@ export class ScoreService {
 
       // Garante que a pessoa sendo pontuada pertence ao tenant
       const pessoaAtualizada = await this.prisma.pessoa.update({
-        where: { id: pessoaId, tenantId } as any,
+        where: { id: pessoaId, tenantId },
         data: {
           score: { increment: regra.pontos },
         },
@@ -41,7 +41,7 @@ export class ScoreService {
       if (pessoaAtualizada.liderancaId) {
         const bonusLideranca = Math.ceil(regra.pontos * 0.2);
         await this.prisma.pessoa.update({
-          where: { id: pessoaAtualizada.liderancaId, tenantId } as any,
+          where: { id: pessoaAtualizada.liderancaId, tenantId },
           data: { score: { increment: bonusLideranca } },
         });
         this.logger.log(

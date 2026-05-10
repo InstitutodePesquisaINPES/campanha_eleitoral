@@ -12,6 +12,8 @@ import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
+import { CreateTagDto, AddRoleDto } from './dto/admin.dto';
+import { AppRole } from '@prisma/client';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('admin')
@@ -41,16 +43,16 @@ export class AdminController {
   @Post('users/:id/roles')
   addRole(
     @Param('id') userId: string,
-    @Body('role') role: string,
+    @Body() body: AddRoleDto,
     @CurrentTenant() tenantId: string,
   ) {
-    return this.adminService.addRole(tenantId, userId, role);
+    return this.adminService.addRole(tenantId, userId, body.role);
   }
 
   @Delete('users/:id/roles/:role')
   removeRole(
     @Param('id') userId: string,
-    @Param('role') role: string,
+    @Param('role') role: AppRole,
     @CurrentTenant() tenantId: string,
   ) {
     return this.adminService.removeRole(tenantId, userId, role);
@@ -71,7 +73,7 @@ export class AdminController {
   }
 
   @Post('tags')
-  createTag(@Body() data: any, @CurrentTenant() tenantId: string) {
+  createTag(@Body() data: CreateTagDto, @CurrentTenant() tenantId: string) {
     return this.adminService.createTag(tenantId, data);
   }
 

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CreateTagDto } from './dto/admin.dto';
+import { AppRole } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -42,7 +44,7 @@ export class AdminService {
     });
   }
 
-  async createTag(tenantId: string, data: any) {
+  async createTag(tenantId: string, data: CreateTagDto) {
     return this.prisma.tag.create({
       data: { ...data, tenantId },
     });
@@ -54,15 +56,15 @@ export class AdminService {
     });
   }
 
-  async addRole(tenantId: string, userId: string, role: string) {
+  async addRole(tenantId: string, userId: string, role: AppRole) {
     return this.prisma.userRole.create({
-      data: { userId, role: role as any, tenantId },
+      data: { userId, role, tenantId },
     });
   }
 
-  async removeRole(tenantId: string, userId: string, role: string) {
+  async removeRole(tenantId: string, userId: string, role: AppRole) {
     return this.prisma.userRole.deleteMany({
-      where: { userId, role: role as any, tenantId },
+      where: { userId, role, tenantId },
     });
   }
 }

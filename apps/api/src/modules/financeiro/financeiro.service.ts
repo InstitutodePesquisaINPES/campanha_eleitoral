@@ -1,5 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  CreateCentroCustoDto,
+  CreateDespesaDto,
+  UpdateDespesaDto,
+  CreateReceitaDto,
+} from './dto/financeiro.dto';
 
 @Injectable()
 export class FinanceiroService {
@@ -13,7 +19,7 @@ export class FinanceiroService {
     });
   }
 
-  async createCentroCusto(data: any, tenantId: string) {
+  async createCentroCusto(data: CreateCentroCustoDto, tenantId: string) {
     return this.prisma.centroCusto.create({ data: { ...data, tenantId } });
   }
 
@@ -37,13 +43,17 @@ export class FinanceiroService {
     });
   }
 
-  async createDespesa(data: any, userId: string, tenantId: string) {
+  async createDespesa(
+    data: CreateDespesaDto,
+    userId: string,
+    tenantId: string,
+  ) {
     return this.prisma.despesa.create({
       data: { ...data, responsavelId: userId, tenantId },
     });
   }
 
-  async updateDespesa(id: string, data: any, tenantId: string) {
+  async updateDespesa(id: string, data: UpdateDespesaDto, tenantId: string) {
     return this.prisma.despesa.update({
       where: { id, tenantId } as any,
       data,
@@ -70,7 +80,7 @@ export class FinanceiroService {
     });
   }
 
-  async createReceita(data: any, tenantId: string) {
+  async createReceita(data: CreateReceitaDto, tenantId: string) {
     return this.prisma.receita.create({ data: { ...data, tenantId } });
   }
 

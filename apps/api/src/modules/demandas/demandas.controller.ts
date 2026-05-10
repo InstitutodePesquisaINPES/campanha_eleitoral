@@ -16,6 +16,12 @@ import {
   CurrentTenant,
   CurrentUser,
 } from '../../common/decorators/tenant.decorator';
+import {
+  CreateDemandaDto,
+  UpdateDemandaDto,
+  CreateEncaminhamentoDto,
+  CreateAnexoDto,
+} from './dto/demandas.dto';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('demandas')
@@ -23,7 +29,10 @@ export class DemandasController {
   constructor(private readonly demandasService: DemandasService) {}
 
   @Get()
-  findAll(@Query() filters: any, @CurrentTenant() tenantId: string) {
+  findAll(
+    @Query() filters: Record<string, string>,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.demandasService.findAll(filters, tenantId);
   }
 
@@ -39,7 +48,7 @@ export class DemandasController {
 
   @Post()
   create(
-    @Body() data: any,
+    @Body() data: CreateDemandaDto,
     @CurrentUser() userId: string,
     @CurrentTenant() tenantId: string,
   ) {
@@ -49,7 +58,7 @@ export class DemandasController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: UpdateDemandaDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.demandasService.update(id, data, tenantId);
@@ -69,7 +78,7 @@ export class DemandasController {
   @Post(':id/encaminhamentos')
   createEncaminhamento(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: CreateEncaminhamentoDto,
     @CurrentUser() userId: string,
   ) {
     return this.demandasService.createEncaminhamento(
@@ -85,7 +94,7 @@ export class DemandasController {
   }
 
   @Post(':id/anexos')
-  createAnexo(@Param('id') id: string, @Body() data: any) {
+  createAnexo(@Param('id') id: string, @Body() data: CreateAnexoDto) {
     return this.demandasService.createAnexo({ ...data, demandaId: id });
   }
 }

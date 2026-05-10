@@ -7,12 +7,14 @@ import {
   Param,
   UseGuards,
   Query,
+  Request,
 } from '@nestjs/common';
 import { ContratosService } from './contratos.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
-import { Request } from '@nestjs/common';
+import type { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
+import { DecidirAprovacaoDto } from './dto/contratos.dto';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('contratos')
@@ -29,11 +31,11 @@ export class ContratosController {
 
   @Get('minhas-aprovacoes')
   getMinhasAprovacoesPendentes(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @CurrentTenant() tenantId: string,
   ) {
     return this.contratosService.getMinhasAprovacoesPendentes(
-      req.user.userId,
+      req.user.sub,
       tenantId,
     );
   }
@@ -41,16 +43,15 @@ export class ContratosController {
   @Put('aprovacoes/:id/decidir')
   decidirAprovacao(
     @Param('id') id: string,
-    @Body('status') status: string,
-    @Body('observacao') observacao: string,
-    @Request() req: any,
+    @Body() body: DecidirAprovacaoDto,
+    @Request() req: AuthenticatedRequest,
     @CurrentTenant() tenantId: string,
   ) {
     return this.contratosService.decidirAprovacao(
       id,
-      status,
-      observacao,
-      req.user.userId,
+      body.status,
+      body.observacao || '',
+      req.user.sub,
       tenantId,
     );
   }

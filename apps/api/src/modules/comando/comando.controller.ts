@@ -12,6 +12,11 @@ import { ComandoService } from './comando.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
+import {
+  CreateReuniaoDto,
+  UpdateReuniaoDto,
+  CreateDeliberacaoDto,
+} from './dto/comando.dto';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('comando')
@@ -37,14 +42,17 @@ export class ComandoController {
   }
 
   @Post('reunioes')
-  createReuniao(@Body() data: any, @CurrentTenant() tenantId: string) {
+  createReuniao(
+    @Body() data: CreateReuniaoDto,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.comandoService.createReuniao(data, tenantId);
   }
 
   @Put('reunioes/:id')
   updateReuniao(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: UpdateReuniaoDto,
     @CurrentTenant() tenantId: string,
   ) {
     return this.comandoService.updateReuniao(id, data, tenantId);
@@ -59,7 +67,10 @@ export class ComandoController {
   }
 
   @Post('deliberacoes')
-  createDeliberacao(@Body() data: any, @CurrentTenant() tenantId: string) {
+  createDeliberacao(
+    @Body() data: CreateDeliberacaoDto,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.comandoService.createDeliberacao(data, tenantId);
   }
 

@@ -44,7 +44,7 @@ export class CampanhasService {
     const campanha = await this.findOne(tenantId, id);
     return this.prisma.campanha.update({
       where: { id: campanha.id },
-      data: data as Prisma.CampanhaUncheckedUpdateInput,
+      data: data,
     });
   }
 
@@ -95,18 +95,14 @@ export class CampanhasService {
     });
   }
 
-  async updateTarefa(
-    tenantId: string,
-    id: string,
-    data: UpdateTarefaDto,
-  ) {
+  async updateTarefa(tenantId: string, id: string, data: UpdateTarefaDto) {
     const tarefa = await this.prisma.campanhaTarefa.findFirst({
       where: { tenantId, id },
     });
     if (!tarefa) throw new NotFoundException('Tarefa não encontrada');
     return this.prisma.campanhaTarefa.update({
       where: { id: tarefa.id },
-      data: data as Prisma.CampanhaTarefaUncheckedUpdateInput,
+      data: data,
     });
   }
 
@@ -127,11 +123,7 @@ export class CampanhasService {
     });
   }
 
-  async createMeta(
-    tenantId: string,
-    campanhaId: string,
-    data: CreateMetaDto,
-  ) {
+  async createMeta(tenantId: string, campanhaId: string, data: CreateMetaDto) {
     return this.prisma.campanhaMeta.create({
       data: {
         ...(data as Prisma.CampanhaMetaUncheckedCreateInput),
@@ -141,18 +133,14 @@ export class CampanhasService {
     });
   }
 
-  async updateMeta(
-    tenantId: string,
-    id: string,
-    data: UpdateMetaDto,
-  ) {
+  async updateMeta(tenantId: string, id: string, data: UpdateMetaDto) {
     const meta = await this.prisma.campanhaMeta.findFirst({
       where: { tenantId, id },
     });
     if (!meta) throw new NotFoundException('Meta não encontrada');
     return this.prisma.campanhaMeta.update({
       where: { id: meta.id },
-      data: data as Prisma.CampanhaMetaUncheckedUpdateInput,
+      data: data,
     });
   }
 
@@ -188,18 +176,14 @@ export class CampanhasService {
     });
   }
 
-  async updateSemana(
-    tenantId: string,
-    id: string,
-    data: UpdateSemanaDto,
-  ) {
+  async updateSemana(tenantId: string, id: string, data: UpdateSemanaDto) {
     const semana = await this.prisma.campanhaSemana.findFirst({
       where: { tenantId, id },
     });
     if (!semana) throw new NotFoundException('Semana não encontrada');
     return this.prisma.campanhaSemana.update({
       where: { id: semana.id },
-      data: data as Prisma.CampanhaSemanaUncheckedUpdateInput,
+      data: data,
     });
   }
 

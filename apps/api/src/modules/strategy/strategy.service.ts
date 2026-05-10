@@ -1,5 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  CreateCampanhaDto,
+  UpdateCampanhaDto,
+  CreateEixoDto,
+  UpdateEixoDto,
+  CreatePlanoAcaoDto,
+  UpdatePlanoAcaoDto,
+  CreateParceriaDto,
+} from './dto/strategy.dto';
 
 @Injectable()
 export class StrategyService {
@@ -7,7 +16,11 @@ export class StrategyService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async createCampanha(data: any, userId: string, tenantId: string) {
+  async createCampanha(
+    data: CreateCampanhaDto,
+    userId: string,
+    tenantId: string,
+  ) {
     return this.prisma.campanhaEstrategia.create({
       data: {
         ...data,
@@ -31,7 +44,11 @@ export class StrategyService {
     });
   }
 
-  async createParceria(campanhaId: string, data: any, tenantId: string) {
+  async createParceria(
+    campanhaId: string,
+    data: CreateParceriaDto,
+    tenantId: string,
+  ) {
     return this.prisma.campanhaParceria.create({
       data: {
         ...data,
@@ -41,7 +58,7 @@ export class StrategyService {
     });
   }
 
-  async createEixo(campanhaId: string, data: any, tenantId: string) {
+  async createEixo(campanhaId: string, data: CreateEixoDto, tenantId: string) {
     return this.prisma.eixoEstrategico.create({
       data: {
         ...data,
@@ -51,7 +68,11 @@ export class StrategyService {
     });
   }
 
-  async createPlanoAcao(eixoId: string, data: any, tenantId: string) {
+  async createPlanoAcao(
+    eixoId: string,
+    data: CreatePlanoAcaoDto,
+    tenantId: string,
+  ) {
     return this.prisma.planoAcao.create({
       data: {
         ...data,
@@ -130,7 +151,7 @@ export class StrategyService {
 
   // --- UPDATE E DELETE ---
 
-  async updateCampanha(id: string, data: any, tenantId: string) {
+  async updateCampanha(id: string, data: UpdateCampanhaDto, tenantId: string) {
     return this.prisma.campanhaEstrategia.update({
       where: { id, tenantId } as any,
       data,
@@ -143,7 +164,7 @@ export class StrategyService {
     });
   }
 
-  async updateEixo(id: string, data: any, tenantId: string) {
+  async updateEixo(id: string, data: UpdateEixoDto, tenantId: string) {
     return this.prisma.eixoEstrategico.update({
       where: { id, tenantId } as any,
       data,
@@ -156,7 +177,11 @@ export class StrategyService {
     });
   }
 
-  async updatePlanoAcao(id: string, data: any, tenantId: string) {
+  async updatePlanoAcao(
+    id: string,
+    data: UpdatePlanoAcaoDto,
+    tenantId: string,
+  ) {
     return this.prisma.planoAcao.update({
       where: { id, tenantId } as any,
       data,

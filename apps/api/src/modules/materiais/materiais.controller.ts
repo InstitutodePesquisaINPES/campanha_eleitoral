@@ -7,12 +7,18 @@ import {
   Param,
   UseGuards,
   Query,
+  Request,
 } from '@nestjs/common';
 import { MateriaisService } from './materiais.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
-import { Request } from '@nestjs/common';
+import type { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
+import {
+  CreateMaterialDto,
+  CreateEstoqueDto,
+  CreateMovimentacaoDto,
+} from './dto/materiais.dto';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('materiais')
@@ -26,7 +32,10 @@ export class MateriaisController {
   }
 
   @Post()
-  createMaterial(@Body() data: any, @CurrentTenant() tenantId: string) {
+  createMaterial(
+    @Body() data: CreateMaterialDto,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.materiaisService.createMaterial(data, tenantId);
   }
 
@@ -42,7 +51,10 @@ export class MateriaisController {
   }
 
   @Post('estoques')
-  createEstoque(@Body() data: any, @CurrentTenant() tenantId: string) {
+  createEstoque(
+    @Body() data: CreateEstoqueDto,
+    @CurrentTenant() tenantId: string,
+  ) {
     return this.materiaisService.createEstoque(data, tenantId);
   }
 
@@ -57,11 +69,11 @@ export class MateriaisController {
 
   @Post('movimentacoes')
   createMovimentacao(
-    @Body() data: any,
-    @Request() req: any,
+    @Body() data: CreateMovimentacaoDto,
+    @Request() req: AuthenticatedRequest,
     @CurrentTenant() tenantId: string,
   ) {
-    const dataWithUser = { ...data, responsavelId: req.user.userId };
+    const dataWithUser = { ...data, responsavelId: req.user.sub };
     return this.materiaisService.createMovimentacao(dataWithUser, tenantId);
   }
 }

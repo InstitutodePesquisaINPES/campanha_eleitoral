@@ -8,6 +8,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Body,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -16,7 +17,7 @@ import { DocumentosService } from './documentos.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
-import { Request } from '@nestjs/common';
+import type { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
 import * as fs from 'fs';
 
 // Ensure uploads directory exists
@@ -31,8 +32,11 @@ export class DocumentosController {
   constructor(private readonly documentosService: DocumentosService) {}
 
   @Get()
-  getDocumentos(@Request() req: any, @CurrentTenant() tenantId: string) {
-    return this.documentosService.getDocumentos(req.user.userId, tenantId);
+  getDocumentos(
+    @Req() req: AuthenticatedRequest,
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.documentosService.getDocumentos(req.user.sub, tenantId);
   }
 
   @Post('upload')
@@ -54,7 +58,7 @@ export class DocumentosController {
     @Body('titulo') titulo: string,
     @Body('tipo') tipo: string,
     @Body('descricao') descricao: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @CurrentTenant() tenantId: string,
   ) {
     const arquivoUrl = `/uploads/documentos/${file.filename}`;
@@ -62,7 +66,7 @@ export class DocumentosController {
 
     return this.documentosService.createDocumento(
       {
-        pessoaId: req.user.userId,
+        pessoaId: req.user.sub,
         arquivoUrl,
         tipoDocumento: tipo,
         descricao: fullDescricao,
