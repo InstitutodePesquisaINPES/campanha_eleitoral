@@ -18,4 +18,5 @@ RUN uv pip install --system --no-cache .
 COPY src/ src/
 
 # Entry point
+ENV RUN_WORKER=true
 CMD ["python", "-m", "src.main"]

@@ -7,3 +7,4 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@lo
 TSE_CDN_BASE = "https://cdn.tse.jus.br/estatistica/sead/odsele"
 
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", 50000))
+POLL_INTERVAL = int(os.environ.get("TSE_WORKER_POLL_INTERVAL", 10))

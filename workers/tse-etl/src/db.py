@@ -39,3 +39,26 @@ def log_job(job_id: str, level: str, message: str):
                 (job_id, level, message)
             )
             conn.commit()
+
+def fetch_next_job() -> dict:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Pegar o proximo job pendente ('queued') com FOR UPDATE SKIP LOCKED
+            cur.execute("""
+                SELECT id, tipo, ano, uf 
+                FROM tse_import_jobs 
+                WHERE status = 'queued' 
+                ORDER BY created_at ASC 
+                LIMIT 1 
+                FOR UPDATE SKIP LOCKED
+            """)
+            job = cur.fetchone()
+            if job:
+                # Marcar como running para evitar que outro worker pegue
+                cur.execute(
+                    "UPDATE tse_import_jobs SET status = 'running', started_at = NOW() WHERE id = %s",
+                    (job['id'],)
+                )
+                conn.commit()
+                return job
+            return None
