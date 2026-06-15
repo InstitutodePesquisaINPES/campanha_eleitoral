@@ -317,88 +317,104 @@ Deno.serve(async (req) => {
     const filtro = (arquivo.municipios_filtro as string[] | null) ?? null;
     const totalBytes = arquivo.tamanho_bytes ?? Number.POSITIVE_INFINITY;
 
-    // 3) Processa apenas um slice curto por chamada. O cron/cliente chama de novo e retoma pelo cursor.
-    if (cursor < totalBytes) {
+    // 3) LOOP INTERNO: processa quantos ranges couberem no time-budget desta invocação.
+    //    Cada iteração baixa ~64KB, parseia e ingere. Isso multiplica em ~50x o throughput
+    //    em relação a "1 range por invocação".
+    let iter = 0;
+    while (cursor < totalBytes && Date.now() - t0 < TIME_BUDGET_MS) {
+      iter++;
       let bytes: Uint8Array<ArrayBufferLike> = new Uint8Array();
       let requestedEnd = Math.min(totalBytes - 1, cursor + RANGE_BYTES - 1);
 
-      // Se um range específico do Storage der 504, reduzimos o range nesta mesma execução
-      // e tentamos novamente sem marcar o arquivo como erro definitivo.
+      // Se um range específico do Storage der 504, reduzimos o range nesta mesma iteração.
       for (let size = RANGE_BYTES; size >= 8 * 1024; size = Math.floor(size / 2)) {
         requestedEnd = Math.min(totalBytes - 1, cursor + size - 1);
         try {
           bytes = await downloadRange(admin, partsInfo, cursor, requestedEnd);
           break;
         } catch (err) {
-          if (!(err instanceof TransientStorageError) || size <= 8 * 1024) throw err;
+          if (!(err instanceof TransientStorageError) || size <= 8 * 1024) {
+            console.warn(`[storage skip] ${(err as Error).message}; saindo do loop interno`);
+            bytes = new Uint8Array();
+            break;
+          }
           console.warn(`[storage transient] ${(err as Error).message}; retrying smaller range=${Math.floor(size / 2)}`);
         }
       }
 
-      if (bytes.byteLength > 0) {
-        const text = decoder.decode(bytes);
-        const lastNl = text.lastIndexOf("\n");
-        const isFinalRange = cursor + bytes.byteLength >= totalBytes;
-        const completePart = lastNl >= 0 ? text.slice(0, lastNl) : isFinalRange ? text : "";
+      if (bytes.byteLength === 0) break;
 
-        if (completePart.length > 0) {
-          const csvBlock = header + "\n" + completePart;
-          let rows: any[];
-          try {
-            rows = parse(csvBlock, {
-              delimiter: ";",
-              columns: true,
-              relax_quotes: true,
-              relax_column_count: true,
-              skip_empty_lines: true,
-              bom: true,
-              trim: false,
-            });
-          } catch (err) {
-            // Nunca travar: anota o erro, avança o cursor para pular este bloco e continua
-            console.warn("[parse skip]", (err as Error).message);
-            const advance = lastNl >= 0 ? byteLengthLatin1(completePart) + 1 : bytes.byteLength;
-            cursor += Math.min(bytes.byteLength, advance);
-            await admin
-              .from("tse_csv_arquivos")
-              .update({
-                status: "aguardando",
-                byte_cursor: cursor,
-                error_msg: "parse pulado: " + (err as Error).message.slice(0, 200),
-                ultima_atividade_em: new Date().toISOString(),
-              })
-              .eq("id", arquivo.id);
-            return json({ ok: true, skipped: true, arquivo: arquivo.id, cursor });
-          }
+      const text = decoder.decode(bytes);
+      const lastNl = text.lastIndexOf("\n");
+      const isFinalRange = cursor + bytes.byteLength >= totalBytes;
+      const completePart = lastNl >= 0 ? text.slice(0, lastNl) : isFinalRange ? text : "";
 
-          for (const row of rows) {
-            if (!matchMunicipio(row, filtro)) continue;
-            const mapped = mapRow(tipo, arquivo.ano, arquivo.uf, row);
-            if (!mapped) continue;
-            buffer.push(mapped);
-            if (buffer.length >= Math.min(arquivo.chunk_size ?? SUBLOTE, SUBLOTE)) {
-              const count = buffer.length;
-              const ins = await flushBuffer(admin, tabela, buffer, onConflict);
-              totalInseridoSessao += ins;
-              linhasProcessadas += count;
-              buffer = [];
-            }
-          }
+      if (completePart.length > 0) {
+        const csvBlock = header + "\n" + completePart;
+        let rows: any[];
+        try {
+          rows = parse(csvBlock, {
+            delimiter: ";",
+            columns: true,
+            relax_quotes: true,
+            relax_column_count: true,
+            skip_empty_lines: true,
+            bom: true,
+            trim: false,
+          });
+        } catch (err) {
+          // Nunca travar: avança o cursor para pular este bloco e continua na próxima iteração
+          console.warn("[parse skip]", (err as Error).message);
+          const advance = lastNl >= 0 ? byteLengthLatin1(completePart) + 1 : bytes.byteLength;
+          cursor += Math.min(bytes.byteLength, advance);
+          continue;
+        }
 
-          if (buffer.length > 0) {
+        for (const row of rows) {
+          if (!matchMunicipio(row, filtro)) continue;
+          const mapped = mapRow(tipo, arquivo.ano, arquivo.uf, row);
+          if (!mapped) continue;
+          buffer.push(mapped);
+          if (buffer.length >= Math.min(arquivo.chunk_size ?? SUBLOTE, SUBLOTE)) {
             const count = buffer.length;
             const ins = await flushBuffer(admin, tabela, buffer, onConflict);
             totalInseridoSessao += ins;
             linhasProcessadas += count;
             buffer = [];
           }
-
-          (rows as any).length = 0;
-          const advanceBytes = isFinalRange && lastNl < 0 ? bytes.byteLength : byteLengthLatin1(completePart) + 1;
-          cursor += Math.min(bytes.byteLength, advanceBytes);
-        } else {
-          cursor += bytes.byteLength;
         }
+
+        if (buffer.length > 0) {
+          const count = buffer.length;
+          const ins = await flushBuffer(admin, tabela, buffer, onConflict);
+          totalInseridoSessao += ins;
+          linhasProcessadas += count;
+          buffer = [];
+        }
+
+        (rows as any).length = 0;
+        const advanceBytes = isFinalRange && lastNl < 0 ? bytes.byteLength : byteLengthLatin1(completePart) + 1;
+        cursor += Math.min(bytes.byteLength, advanceBytes);
+      } else {
+        cursor += bytes.byteLength;
+      }
+
+      // Heartbeat a cada ~10 iterações para o frontend ver o progresso
+      if (iter % 10 === 0) {
+        const pct = arquivo.tamanho_bytes
+          ? Math.min(99, Math.round((cursor / arquivo.tamanho_bytes) * 100))
+          : 0;
+        await admin
+          .from("tse_csv_arquivos")
+          .update({
+            byte_cursor: cursor,
+            linhas_processadas: linhasProcessadas,
+            progress_pct: pct,
+            ultima_atividade_em: new Date().toISOString(),
+            attempts: 0,
+            error_msg: null,
+          })
+          .eq("id", arquivo.id);
       }
     }
 
@@ -413,6 +429,8 @@ Deno.serve(async (req) => {
         linhas_processadas: linhasProcessadas,
         progress_pct: pctAtual,
         ultima_atividade_em: new Date().toISOString(),
+        attempts: 0,
+        error_msg: null,
       })
       .eq("id", arquivo.id);
 
