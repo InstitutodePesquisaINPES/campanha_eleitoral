@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// IDs IBGE da microrregião de Vitória da Conquista (32 municípios) usados como "foco padrão" do Kiribamba
+// IDs IBGE da microrregião de Vitória da Conquista (32 municípios) usados como "foco padrão" da campanha
 export const MICRORREGIAO_VC_IBGE = [
   "2933307", // Vitória da Conquista
   "2900801", // Anagé
