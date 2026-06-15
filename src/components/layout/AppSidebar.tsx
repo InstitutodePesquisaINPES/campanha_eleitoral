@@ -29,6 +29,7 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useIsAdmin } from "@/hooks/useUserRoles";
+import { useCampanhaAtiva } from "@/hooks/useCampanhas";
 import {
   Sidebar,
   SidebarContent,
