@@ -477,14 +477,11 @@ Deno.serve(async (req) => {
     console.error("worker fatal:", msg);
     if (arquivoAtual?.id) {
       try {
-        // Política: NUNCA travar a fila. Qualquer erro inesperado vira "aguardando" para retomar.
-        // Só marcamos como "erro" se exceder muitas tentativas seguidas (controle por attempts).
-        const attempts = (arquivoAtual.attempts ?? 0);
-        const tooManyFailures = attempts >= 50;
+        // Política: NUNCA travar a fila. Qualquer erro inesperado vira "aguardando" para o cron retomar.
         await createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
           .from("tse_csv_arquivos")
           .update({
-            status: tooManyFailures ? "erro" : "aguardando",
+            status: "aguardando",
             error_msg: `[${new Date().toISOString()}] ${msg}`.slice(0, 500),
             ultima_atividade_em: new Date().toISOString(),
           })
