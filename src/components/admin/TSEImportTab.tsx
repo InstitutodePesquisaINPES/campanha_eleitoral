@@ -81,6 +81,9 @@ export function TSEImportTab() {
 
   return (
     <div className="space-y-4">
+      {/* Painel de status da sincronização TSE */}
+      <TSESyncStatus />
+
       {/* Upload de CSV */}
       <TSECsvUpload />
 
