@@ -131,6 +131,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const { signOut } = useAuth();
   const { data: profile } = useProfile();
+  const { data: campanha } = useCampanhaAtiva();
   const isAdmin = useIsAdmin();
 
   const initials = (profile?.full_name || "U")
@@ -140,23 +141,33 @@ export function AppSidebar() {
     .join("")
     .toUpperCase();
 
+  const numero = (campanha as any)?.numero_urna ?? "—";
+  const nomeCampanha = ((campanha as any)?.nome || "CANDIDATO").toUpperCase();
+  const partido = (campanha as any)?.partido_sigla || "AVANTE";
+  const cargoLabel = (() => {
+    const c = (campanha as any)?.cargo as string | undefined;
+    if (!c) return "";
+    return c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  })();
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <div className="brand-number flex h-10 w-10 items-center justify-center rounded-lg text-base shadow-md">
-            70
+            {numero}
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <h2 className="text-sm font-extrabold text-sidebar-foreground leading-tight" style={{ fontFamily: "'Sora', sans-serif" }}>KIRIBAMBA</h2>
-              <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/70 font-semibold">
-                Avante · Dep. Federal
+              <h2 className="text-sm font-extrabold text-sidebar-foreground leading-tight truncate" style={{ fontFamily: "'Sora', sans-serif" }}>{nomeCampanha}</h2>
+              <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/70 font-semibold truncate">
+                {partido}{cargoLabel ? ` · ${cargoLabel}` : ""}
               </p>
             </div>
           )}
         </div>
       </SidebarHeader>
+
 
       <SidebarSeparator />
 
