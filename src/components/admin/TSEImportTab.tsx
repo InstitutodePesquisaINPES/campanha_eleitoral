@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { TSECsvUpload } from "./TSECsvUpload";
 import { TSECsvArquivosList } from "./TSECsvArquivosList";
 import { TSEDadosResumo } from "./TSEDadosResumo";
+import { TSESyncStatus } from "./TSESyncStatus";
 import { IBGEImportPanel } from "./IBGEImportPanel";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
