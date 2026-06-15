@@ -109,10 +109,11 @@ export function ConsultorBriefing() {
     });
   }
   if (insights.gapCadastro > 0) {
+    const baseNome = (campanha as any).municipios?.nome ?? "a base eleitoral";
     recs.push({
       icon: Lightbulb,
       title: "Operação de cadastro",
-      desc: `Cadastrar ~${Math.ceil(insights.gapCadastro / Math.max(1, Math.ceil((insights.diasParaEleicao || 1) / 7)))} pessoas/semana até a eleição para fechar a meta de ${insights.metaCadastro.toLocaleString("pt-BR")}. Direcione a equipe de campo para Vitória da Conquista (base) + 2 cidades de foco/semana.`,
+      desc: `Cadastrar ~${Math.ceil(insights.gapCadastro / Math.max(1, Math.ceil((insights.diasParaEleicao || 1) / 7)))} pessoas/semana até a eleição para fechar a meta de ${insights.metaCadastro.toLocaleString("pt-BR")}. Direcione a equipe de campo para ${baseNome} + 2 cidades de foco/semana.`,
       tone: "info",
     });
   }
@@ -139,7 +140,7 @@ export function ConsultorBriefing() {
         <CardTitle className="flex items-center gap-2 text-base">
           <Quote className="h-4 w-4" style={{ color: "hsl(var(--brand-yellow))" }} />
           Briefing do Consultor
-          <Badge className="ml-auto bg-white/15 text-white border-white/20 hover:bg-white/20">Stenio Fernando</Badge>
+          <Badge className="ml-auto bg-white/15 text-white border-white/20 hover:bg-white/20">Análise estratégica</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-5 space-y-4">

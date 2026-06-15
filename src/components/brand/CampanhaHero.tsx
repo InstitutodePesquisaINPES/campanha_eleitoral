@@ -12,6 +12,9 @@ export function CampanhaHero() {
 
   const dias = Math.max(0, Math.ceil((new Date(c.data_eleicao).getTime() - Date.now()) / 86400000));
   const partido = c.partido_sigla ?? "AVANTE";
+  const baseNome = (c as any).municipios?.nome ?? "—";
+  const ufSigla = (c as any).estados?.sigla ?? "BA";
+  const cargoLabel = c.cargo.replace(/_/g, " ");
 
   return (
     <div className="relative overflow-hidden rounded-2xl hero-gradient text-white shadow-lg">
@@ -26,19 +29,18 @@ export function CampanhaHero() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="brand-pill">{partido}</span>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-white/80">
-              {c.cargo.replace("_", " ")} · Bahia
+              {cargoLabel} · {ufSigla}
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight" style={{ fontFamily: "'Sora', sans-serif" }}>
             {c.nome}
           </h1>
           <p className="text-sm sm:text-base text-white/85 max-w-2xl">
-            Campanha estruturada com plano de 90 dias, cronograma legal do TSE e expansão regional pela
-            microrregião de Vitória da Conquista.
+            Campanha estruturada com plano de 90 dias, cronograma legal do TSE e expansão regional a partir da base.
           </p>
 
           <div className="flex flex-wrap gap-4 pt-2 text-sm">
-            <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" /> Base: Vitória da Conquista</span>
+            <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" /> Base: {baseNome}</span>
             <span className="inline-flex items-center gap-1.5"><Target className="h-4 w-4" /> Meta: {c.meta_votos?.toLocaleString("pt-BR") ?? "—"} votos</span>
             <span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4" /> Eleição: {new Date(c.data_eleicao).toLocaleDateString("pt-BR")}</span>
           </div>
