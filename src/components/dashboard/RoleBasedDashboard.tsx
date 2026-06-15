@@ -50,7 +50,7 @@ export function RoleBasedDashboard() {
             {isExecutivo && <Crown className="h-5 w-5 text-warning" />}
             Bom trabalho, {profile?.full_name?.split(" ")[0] || "comandante"} 👊
           </h2>
-          <p className="text-sm text-muted-foreground">{roleLabel} · Comitê Kiribamba · Avante BA</p>
+          <p className="text-sm text-muted-foreground">{roleLabel} · Comitê de Campanha</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {kpis?.campanhaId && (
