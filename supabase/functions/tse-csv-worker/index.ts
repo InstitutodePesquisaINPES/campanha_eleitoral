@@ -16,7 +16,8 @@ const corsHeaders = {
 };
 
 const BUCKET = "tse-csv-uploads";
-const RANGE_BYTES = 64 * 1024; // 64KB por execução — evita 504 do Storage e estouro de CPU
+const RANGE_BYTES = 64 * 1024; // 64KB por iteração — evita 504 do Storage
+const TIME_BUDGET_MS = 45_000; // loop interno: continua processando ranges enquanto sobrar tempo
 const STALE_PROCESSING_MS = 2 * 60_000;
 const SUBLOTE = 25;
 
