@@ -256,3 +256,67 @@ export function useCreateAnexo() {
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["demandas_anexos", v.demanda_id] }),
   });
 }
+
+// ============================================================
+// SLA + Histórico de status (Onda 4)
+// ============================================================
+export type SituacaoSLA = "no_prazo" | "vencendo" | "vencida" | "atrasada" | "sem_prazo";
+
+export interface DemandaSLA {
+  id: string;
+  protocolo: string;
+  titulo: string;
+  status: string;
+  prioridade: string;
+  responsavel_id: string | null;
+  data_abertura: string;
+  data_prazo: string | null;
+  respondida_em: string | null;
+  tempo_resposta_min: number | null;
+  situacao_sla: SituacaoSLA;
+  horas_restantes: number | null;
+}
+
+export function useDemandasSLA(filters: { somenteMinhas?: boolean; userId?: string } = {}) {
+  return useQuery({
+    queryKey: ["demandas_sla", filters],
+    queryFn: async () => {
+      let q = supabase.from("v_demandas_sla" as any).select("*").order("data_prazo", { ascending: true, nullsFirst: false });
+      if (filters.somenteMinhas && filters.userId) q = q.eq("responsavel_id", filters.userId);
+      const { data, error } = await q.limit(500);
+      if (error) throw error;
+      return (data || []) as unknown as DemandaSLA[];
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function useDemandaSLA(id?: string) {
+  return useQuery({
+    queryKey: ["demanda_sla", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("v_demandas_sla" as any).select("*").eq("id", id!).maybeSingle();
+      if (error) throw error;
+      return data as unknown as DemandaSLA | null;
+    },
+    enabled: !!id,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useDemandaHistorico(demandaId?: string) {
+  return useQuery({
+    queryKey: ["demanda_historico", demandaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("demandas_historico_status" as any)
+        .select("*")
+        .eq("demanda_id", demandaId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!demandaId,
+  });
+}
+
