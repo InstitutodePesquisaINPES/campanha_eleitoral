@@ -1,9 +1,11 @@
 import { useState } from "react";
 import {
   useDemanda, useUpdateDemanda, useEncaminhamentos, useCreateEncaminhamento,
-  useAnexos, useCreateAnexo,
+  useAnexos, useCreateAnexo, useDemandaSLA,
   statusLabels, statusColors, prioridadeLabels, prioridadeColors, categoriaLabels, origemLabels,
 } from "@/hooks/useDemandas";
+import { DemandaSLABadge } from "./DemandaSLABadge";
+import { DemandaHistoricoTimeline } from "./DemandaHistoricoTimeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
