@@ -113,7 +113,7 @@ export function DemandaDetail({ demandaId, onBack }: { demandaId: string; onBack
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-xl font-bold">{demanda.titulo}</h2>
-            {isOverdue && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />SLA vencido há {Math.abs(days!)}d</Badge>}
+            {sla && <DemandaSLABadge situacao={sla.situacao_sla} horasRestantes={sla.horas_restantes} />}
           </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <Badge variant="outline" className="font-mono text-[10px]">{demanda.protocolo}</Badge>
