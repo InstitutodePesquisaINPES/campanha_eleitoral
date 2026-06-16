@@ -16,10 +16,10 @@ const corsHeaders = {
 };
 
 const BUCKET = "tse-csv-uploads";
-const RANGE_BYTES = 64 * 1024; // 64KB por iteração — evita 504 do Storage
-const TIME_BUDGET_MS = 45_000; // loop interno: continua processando ranges enquanto sobrar tempo
+const RANGE_BYTES = 512 * 1024; // 512KB por iteração — 8x mais throughput, ainda longe do limite 504
+const TIME_BUDGET_MS = 50_000; // loop interno: continua processando ranges enquanto sobrar tempo
 const STALE_PROCESSING_MS = 2 * 60_000;
-const SUBLOTE = 25;
+const SUBLOTE = 500; // inserts em lotes de 500 (20x menos round-trips para PostgREST)
 
 class TransientStorageError extends Error {
   constructor(message: string) {
