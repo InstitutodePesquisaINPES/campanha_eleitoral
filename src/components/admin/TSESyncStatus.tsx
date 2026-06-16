@@ -22,9 +22,18 @@ export function TSESyncStatus() {
     for (const a of arquivos) (by[a.status] ||= []).push(a);
     const totalLinhas = arquivos.reduce((s, a) => s + (a.total_linhas ?? 0), 0);
     const processadas = arquivos.reduce((s, a) => s + (a.linhas_processadas ?? 0), 0);
-    const pctGeral = totalLinhas > 0 ? Math.min(100, Math.round((processadas / totalLinhas) * 100)) : 0;
-    return { by, totalLinhas, processadas, pctGeral };
+    // Progresso global: prefere linhas quando conhecidas; caso contrário usa bytes (cursor / tamanho)
+    const totalBytes = arquivos.reduce((s, a) => s + (a.tamanho_bytes ?? 0), 0);
+    const bytesLidos = arquivos.reduce((s, a) => s + ((a as any).byte_cursor ?? 0), 0);
+    const pctGeral =
+      totalLinhas > 0
+        ? Math.min(100, Math.round((processadas / totalLinhas) * 100))
+        : totalBytes > 0
+          ? Math.min(100, Math.round((bytesLidos / totalBytes) * 100))
+          : 0;
+    return { by, totalLinhas, processadas, pctGeral, totalBytes, bytesLidos };
   }, [arquivos]);
+
 
   const recentes = useMemo(
     () =>
