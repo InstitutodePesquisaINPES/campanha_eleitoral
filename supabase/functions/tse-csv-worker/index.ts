@@ -16,8 +16,10 @@ const corsHeaders = {
 };
 
 const BUCKET = "tse-csv-uploads";
-const RANGE_BYTES = 512 * 1024; // 512KB por iteração — 8x mais throughput, ainda longe do limite 504
-const TIME_BUDGET_MS = 50_000; // loop interno: continua processando ranges enquanto sobrar tempo
+const RANGE_BYTES = 256 * 1024; // 256KB/iter — equilíbrio throughput x risco de 504
+// Edge runtime mata a request com IDLE_TIMEOUT após 150s sem resposta.
+// Budget bem abaixo disso (com folga para a iteração corrente terminar e responder).
+const TIME_BUDGET_MS = 20_000; // 20s
 const STALE_PROCESSING_MS = 2 * 60_000;
 const SUBLOTE = 500; // inserts em lotes de 500 (20x menos round-trips para PostgREST)
 
