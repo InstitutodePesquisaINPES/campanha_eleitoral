@@ -155,8 +155,12 @@ export function DemandaDetail({ demandaId, onBack }: { demandaId: string; onBack
           <TabsTrigger value="detalhes"><FileText className="h-3 w-3 mr-1" />Detalhes</TabsTrigger>
           <TabsTrigger value="encaminhamentos"><Send className="h-3 w-3 mr-1" />Encaminhamentos ({encaminhamentos.length})</TabsTrigger>
           <TabsTrigger value="anexos"><Paperclip className="h-3 w-3 mr-1" />Anexos ({anexos.length})</TabsTrigger>
+          <TabsTrigger value="historico"><Clock className="h-3 w-3 mr-1" />Histórico</TabsTrigger>
           <TabsTrigger value="resolucao"><Clock className="h-3 w-3 mr-1" />Resolução</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="historico"><DemandaHistoricoTimeline demandaId={demandaId} /></TabsContent>
+
 
         <TabsContent value="detalhes">
           <Card>
