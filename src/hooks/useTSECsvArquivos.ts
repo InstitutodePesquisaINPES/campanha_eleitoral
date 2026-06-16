@@ -63,7 +63,7 @@ export function useTSECsvArquivos() {
       if (error) throw error;
       return data as TseCsvArquivo[];
     },
-    refetchInterval: 3000,
+    refetchInterval: 8000,
   });
 }
 

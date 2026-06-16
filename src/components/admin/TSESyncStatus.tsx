@@ -44,7 +44,7 @@ export function TSESyncStatus() {
             Status da sincronização TSE
           </CardTitle>
           <Badge variant="outline" className="text-xs">
-            Atualizando a cada 3s · {arquivos.length} arquivo(s)
+            Atualizando a cada 8s · {arquivos.length} arquivo(s)
           </Badge>
         </div>
       </CardHeader>
