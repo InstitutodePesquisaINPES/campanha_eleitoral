@@ -84,11 +84,19 @@ export function TSESyncStatus() {
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="font-semibold">Progresso global</span>
             <span className="tabular-nums text-muted-foreground">
-              {stats.processadas.toLocaleString("pt-BR")} / {stats.totalLinhas.toLocaleString("pt-BR")} linhas · {stats.pctGeral}%
+              {stats.totalLinhas > 0 ? (
+                <>{stats.processadas.toLocaleString("pt-BR")} / {stats.totalLinhas.toLocaleString("pt-BR")} linhas · {stats.pctGeral}%</>
+              ) : (
+                <>
+                  {stats.processadas.toLocaleString("pt-BR")} linhas processadas ·{" "}
+                  {(stats.bytesLidos / 1024 / 1024).toFixed(1)} / {(stats.totalBytes / 1024 / 1024).toFixed(1)} MB · {stats.pctGeral}%
+                </>
+              )}
             </span>
           </div>
           <Progress value={stats.pctGeral} className="h-3" />
         </div>
+
 
         {/* Últimos registros */}
         <div>
