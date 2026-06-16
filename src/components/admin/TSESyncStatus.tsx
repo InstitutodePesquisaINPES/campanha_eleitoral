@@ -22,9 +22,18 @@ export function TSESyncStatus() {
     for (const a of arquivos) (by[a.status] ||= []).push(a);
     const totalLinhas = arquivos.reduce((s, a) => s + (a.total_linhas ?? 0), 0);
     const processadas = arquivos.reduce((s, a) => s + (a.linhas_processadas ?? 0), 0);
-    const pctGeral = totalLinhas > 0 ? Math.min(100, Math.round((processadas / totalLinhas) * 100)) : 0;
-    return { by, totalLinhas, processadas, pctGeral };
+    // Progresso global: prefere linhas quando conhecidas; caso contrário usa bytes (cursor / tamanho)
+    const totalBytes = arquivos.reduce((s, a) => s + (a.tamanho_bytes ?? 0), 0);
+    const bytesLidos = arquivos.reduce((s, a) => s + ((a as any).byte_cursor ?? 0), 0);
+    const pctGeral =
+      totalLinhas > 0
+        ? Math.min(100, Math.round((processadas / totalLinhas) * 100))
+        : totalBytes > 0
+          ? Math.min(100, Math.round((bytesLidos / totalBytes) * 100))
+          : 0;
+    return { by, totalLinhas, processadas, pctGeral, totalBytes, bytesLidos };
   }, [arquivos]);
+
 
   const recentes = useMemo(
     () =>
@@ -75,11 +84,19 @@ export function TSESyncStatus() {
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="font-semibold">Progresso global</span>
             <span className="tabular-nums text-muted-foreground">
-              {stats.processadas.toLocaleString("pt-BR")} / {stats.totalLinhas.toLocaleString("pt-BR")} linhas · {stats.pctGeral}%
+              {stats.totalLinhas > 0 ? (
+                <>{stats.processadas.toLocaleString("pt-BR")} / {stats.totalLinhas.toLocaleString("pt-BR")} linhas · {stats.pctGeral}%</>
+              ) : (
+                <>
+                  {stats.processadas.toLocaleString("pt-BR")} linhas processadas ·{" "}
+                  {(stats.bytesLidos / 1024 / 1024).toFixed(1)} / {(stats.totalBytes / 1024 / 1024).toFixed(1)} MB · {stats.pctGeral}%
+                </>
+              )}
             </span>
           </div>
           <Progress value={stats.pctGeral} className="h-3" />
         </div>
+
 
         {/* Últimos registros */}
         <div>
