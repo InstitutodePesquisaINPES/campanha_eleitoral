@@ -2469,9 +2469,12 @@ export type Database = {
           prioridade: Database["public"]["Enums"]["prioridade_demanda"]
           protocolo: string
           resolucao_descricao: string | null
+          respondida_em: string | null
           responsavel_id: string | null
           satisfacao_cidadao: number | null
+          sla_horas: number | null
           status: Database["public"]["Enums"]["status_demanda"]
+          tempo_resposta_min: number | null
           titulo: string
           updated_at: string
         }
@@ -2492,9 +2495,12 @@ export type Database = {
           prioridade?: Database["public"]["Enums"]["prioridade_demanda"]
           protocolo: string
           resolucao_descricao?: string | null
+          respondida_em?: string | null
           responsavel_id?: string | null
           satisfacao_cidadao?: number | null
+          sla_horas?: number | null
           status?: Database["public"]["Enums"]["status_demanda"]
+          tempo_resposta_min?: number | null
           titulo: string
           updated_at?: string
         }
@@ -2515,9 +2521,12 @@ export type Database = {
           prioridade?: Database["public"]["Enums"]["prioridade_demanda"]
           protocolo?: string
           resolucao_descricao?: string | null
+          respondida_em?: string | null
           responsavel_id?: string | null
           satisfacao_cidadao?: number | null
+          sla_horas?: number | null
           status?: Database["public"]["Enums"]["status_demanda"]
+          tempo_resposta_min?: number | null
           titulo?: string
           updated_at?: string
         }
@@ -2627,6 +2636,13 @@ export type Database = {
             referencedRelation: "demandas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "demandas_anexos_demanda_id_fkey"
+            columns: ["demanda_id"]
+            isOneToOne: false
+            referencedRelation: "v_demandas_sla"
+            referencedColumns: ["id"]
+          },
         ]
       }
       demandas_encaminhamentos: {
@@ -2660,6 +2676,58 @@ export type Database = {
             columns: ["demanda_id"]
             isOneToOne: false
             referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demandas_encaminhamentos_demanda_id_fkey"
+            columns: ["demanda_id"]
+            isOneToOne: false
+            referencedRelation: "v_demandas_sla"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demandas_historico_status: {
+        Row: {
+          alterado_por: string | null
+          created_at: string
+          demanda_id: string
+          id: string
+          observacao: string | null
+          status_anterior: string | null
+          status_novo: string
+        }
+        Insert: {
+          alterado_por?: string | null
+          created_at?: string
+          demanda_id: string
+          id?: string
+          observacao?: string | null
+          status_anterior?: string | null
+          status_novo: string
+        }
+        Update: {
+          alterado_por?: string | null
+          created_at?: string
+          demanda_id?: string
+          id?: string
+          observacao?: string | null
+          status_anterior?: string | null
+          status_novo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demandas_historico_status_demanda_id_fkey"
+            columns: ["demanda_id"]
+            isOneToOne: false
+            referencedRelation: "demandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demandas_historico_status_demanda_id_fkey"
+            columns: ["demanda_id"]
+            isOneToOne: false
+            referencedRelation: "v_demandas_sla"
             referencedColumns: ["id"]
           },
         ]
@@ -5202,10 +5270,14 @@ export type Database = {
           created_at: string
           created_by: string | null
           error_msg: string | null
+          file_hash: string | null
           finished_at: string | null
           header_line: string | null
           id: string
+          last_error_line: number | null
+          linhas_erro: number
           linhas_processadas: number
+          max_attempts: number
           municipios_filtro: string[] | null
           nome_original: string
           parts_paths: Json
@@ -5231,10 +5303,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           error_msg?: string | null
+          file_hash?: string | null
           finished_at?: string | null
           header_line?: string | null
           id?: string
+          last_error_line?: number | null
+          linhas_erro?: number
           linhas_processadas?: number
+          max_attempts?: number
           municipios_filtro?: string[] | null
           nome_original: string
           parts_paths?: Json
@@ -5260,10 +5336,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           error_msg?: string | null
+          file_hash?: string | null
           finished_at?: string | null
           header_line?: string | null
           id?: string
+          last_error_line?: number | null
+          linhas_erro?: number
           linhas_processadas?: number
+          max_attempts?: number
           municipios_filtro?: string[] | null
           nome_original?: string
           parts_paths?: Json
@@ -6426,6 +6506,51 @@ export type Database = {
             referencedColumns: ["pessoa_id"]
           },
         ]
+      }
+      v_demandas_sla: {
+        Row: {
+          data_abertura: string | null
+          data_prazo: string | null
+          horas_restantes: number | null
+          id: string | null
+          prioridade: Database["public"]["Enums"]["prioridade_demanda"] | null
+          protocolo: string | null
+          respondida_em: string | null
+          responsavel_id: string | null
+          situacao_sla: string | null
+          status: Database["public"]["Enums"]["status_demanda"] | null
+          tempo_resposta_min: number | null
+          titulo: string | null
+        }
+        Insert: {
+          data_abertura?: string | null
+          data_prazo?: string | null
+          horas_restantes?: never
+          id?: string | null
+          prioridade?: Database["public"]["Enums"]["prioridade_demanda"] | null
+          protocolo?: string | null
+          respondida_em?: string | null
+          responsavel_id?: string | null
+          situacao_sla?: never
+          status?: Database["public"]["Enums"]["status_demanda"] | null
+          tempo_resposta_min?: number | null
+          titulo?: string | null
+        }
+        Update: {
+          data_abertura?: string | null
+          data_prazo?: string | null
+          horas_restantes?: never
+          id?: string | null
+          prioridade?: Database["public"]["Enums"]["prioridade_demanda"] | null
+          protocolo?: string | null
+          respondida_em?: string | null
+          responsavel_id?: string | null
+          situacao_sla?: never
+          status?: Database["public"]["Enums"]["status_demanda"] | null
+          tempo_resposta_min?: number | null
+          titulo?: string | null
+        }
+        Relationships: []
       }
       v_indicadores_campanha: {
         Row: {
