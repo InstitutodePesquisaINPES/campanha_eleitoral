@@ -25,6 +25,7 @@ export function DemandaDetail({ demandaId, onBack }: { demandaId: string; onBack
   const createEncaminhamento = useCreateEncaminhamento();
   const { data: anexos = [] } = useAnexos(demandaId);
   const createAnexo = useCreateAnexo();
+  const { data: sla } = useDemandaSLA(demandaId);
 
   const [encObs, setEncObs] = useState("");
   const [resDescricao, setResDescricao] = useState("");
