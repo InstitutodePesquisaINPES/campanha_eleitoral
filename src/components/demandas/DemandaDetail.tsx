@@ -1,9 +1,11 @@
 import { useState } from "react";
 import {
   useDemanda, useUpdateDemanda, useEncaminhamentos, useCreateEncaminhamento,
-  useAnexos, useCreateAnexo,
+  useAnexos, useCreateAnexo, useDemandaSLA,
   statusLabels, statusColors, prioridadeLabels, prioridadeColors, categoriaLabels, origemLabels,
 } from "@/hooks/useDemandas";
+import { DemandaSLABadge } from "./DemandaSLABadge";
+import { DemandaHistoricoTimeline } from "./DemandaHistoricoTimeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,7 @@ export function DemandaDetail({ demandaId, onBack }: { demandaId: string; onBack
   const createEncaminhamento = useCreateEncaminhamento();
   const { data: anexos = [] } = useAnexos(demandaId);
   const createAnexo = useCreateAnexo();
+  const { data: sla } = useDemandaSLA(demandaId);
 
   const [encObs, setEncObs] = useState("");
   const [resDescricao, setResDescricao] = useState("");
@@ -110,7 +113,7 @@ export function DemandaDetail({ demandaId, onBack }: { demandaId: string; onBack
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-xl font-bold">{demanda.titulo}</h2>
-            {isOverdue && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />SLA vencido há {Math.abs(days!)}d</Badge>}
+            {sla && <DemandaSLABadge situacao={sla.situacao_sla} horasRestantes={sla.horas_restantes} />}
           </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <Badge variant="outline" className="font-mono text-[10px]">{demanda.protocolo}</Badge>
@@ -152,8 +155,12 @@ export function DemandaDetail({ demandaId, onBack }: { demandaId: string; onBack
           <TabsTrigger value="detalhes"><FileText className="h-3 w-3 mr-1" />Detalhes</TabsTrigger>
           <TabsTrigger value="encaminhamentos"><Send className="h-3 w-3 mr-1" />Encaminhamentos ({encaminhamentos.length})</TabsTrigger>
           <TabsTrigger value="anexos"><Paperclip className="h-3 w-3 mr-1" />Anexos ({anexos.length})</TabsTrigger>
+          <TabsTrigger value="historico"><Clock className="h-3 w-3 mr-1" />Histórico</TabsTrigger>
           <TabsTrigger value="resolucao"><Clock className="h-3 w-3 mr-1" />Resolução</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="historico"><DemandaHistoricoTimeline demandaId={demandaId} /></TabsContent>
+
 
         <TabsContent value="detalhes">
           <Card>
