@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, DollarSign, TrendingUp, TrendingDown, Building2 } from "lucide-react";
+import { Loader2, Plus, Trash2, DollarSign, TrendingUp, TrendingDown, Building2, HandCoins } from "lucide-react";
+import { CaptacaoPipeline } from "./CaptacaoPipeline";
 
 export function FinanceiroPage() {
   const { toast } = useToast();
@@ -67,8 +68,12 @@ export function FinanceiroPage() {
         <TabsList>
           <TabsTrigger value="despesas"><TrendingDown className="h-3 w-3 mr-1" />Despesas ({despesas.length})</TabsTrigger>
           <TabsTrigger value="receitas"><TrendingUp className="h-3 w-3 mr-1" />Receitas ({receitas.length})</TabsTrigger>
+          <TabsTrigger value="captacao"><HandCoins className="h-3 w-3 mr-1" />Captação</TabsTrigger>
           <TabsTrigger value="centros"><Building2 className="h-3 w-3 mr-1" />Centros ({centros.length})</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="captacao"><CaptacaoPipeline /></TabsContent>
+
 
         {/* DESPESAS */}
         <TabsContent value="despesas">
