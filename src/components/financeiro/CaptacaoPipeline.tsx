@@ -8,7 +8,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Pencil, Phone, Mail, ArrowRight, DollarSign } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trash2, Pencil, Phone, Mail, ArrowRight, DollarSign, Upload, BarChart3, LayoutGrid, Clock, AlertTriangle } from "lucide-react";
+import { CaptacaoImportDialog } from "./CaptacaoImportDialog";
+import { CaptacaoRelatorio } from "./CaptacaoRelatorio";
+
+// SLA em dias por etapa (limite antes de alertar)
+const SLA_DIAS: Record<string, number> = {
+  prospect: 5, contatado: 5, negociando: 10, confirmado: 15, recebido: 0, recusado: 0,
+};
+
+function diasParado(updatedAt: string): number {
+  if (!updatedAt) return 0;
+  const diff = Date.now() - new Date(updatedAt).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function slaLevel(status: string, updatedAt: string): "ok" | "alerta" | "estourado" {
+  const limite = SLA_DIAS[status] ?? 0;
+  if (limite === 0) return "ok";
+  const d = diasParado(updatedAt);
+  if (d > limite) return "estourado";
+  if (d > limite * 0.7) return "alerta";
+  return "ok";
+}
+
 
 type Status = "prospect" | "contatado" | "negociando" | "confirmado" | "recebido" | "recusado";
 
