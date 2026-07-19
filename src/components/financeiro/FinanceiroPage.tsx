@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, DollarSign, TrendingUp, TrendingDown, Building2 } from "lucide-react";
+import { Loader2, Plus, Trash2, DollarSign, TrendingUp, TrendingDown, Building2, HandCoins } from "lucide-react";
+import { CaptacaoPipeline } from "./CaptacaoPipeline";
 
 export function FinanceiroPage() {
   const { toast } = useToast();
