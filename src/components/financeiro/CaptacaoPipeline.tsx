@@ -68,7 +68,21 @@ export function CaptacaoPipeline() {
   const del = useDeleteDoador();
 
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [somenteAtrasados, setSomenteAtrasados] = useState(false);
+  const [aba, setAba] = useState<"pipeline" | "relatorio">("pipeline");
   const [form, setForm] = useState(emptyForm);
+
+  const doadoresFiltrados = useMemo(() => {
+    if (!somenteAtrasados) return doadores as any[];
+    return (doadores as any[]).filter(d => slaLevel(d.status, d.updated_at) !== "ok");
+  }, [doadores, somenteAtrasados]);
+
+  const atrasadosCount = useMemo(
+    () => (doadores as any[]).filter(d => slaLevel(d.status, d.updated_at) === "estourado").length,
+    [doadores]
+  );
+
 
   const grouped = useMemo(() => {
     const g: Record<Status, any[]> = { prospect: [], contatado: [], negociando: [], confirmado: [], recebido: [], recusado: [] };
