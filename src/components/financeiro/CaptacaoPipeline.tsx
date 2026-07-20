@@ -8,7 +8,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Pencil, Phone, Mail, ArrowRight, DollarSign } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trash2, Pencil, Phone, Mail, ArrowRight, DollarSign, Upload, BarChart3, LayoutGrid, Clock, AlertTriangle } from "lucide-react";
+import { CaptacaoImportDialog } from "./CaptacaoImportDialog";
+import { CaptacaoRelatorio } from "./CaptacaoRelatorio";
+
+// SLA em dias por etapa (limite antes de alertar)
+const SLA_DIAS: Record<string, number> = {
+  prospect: 5, contatado: 5, negociando: 10, confirmado: 15, recebido: 0, recusado: 0,
+};
+
+function diasParado(updatedAt: string): number {
+  if (!updatedAt) return 0;
+  const diff = Date.now() - new Date(updatedAt).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function slaLevel(status: string, updatedAt: string): "ok" | "alerta" | "estourado" {
+  const limite = SLA_DIAS[status] ?? 0;
+  if (limite === 0) return "ok";
+  const d = diasParado(updatedAt);
+  if (d > limite) return "estourado";
+  if (d > limite * 0.7) return "alerta";
+  return "ok";
+}
+
 
 type Status = "prospect" | "contatado" | "negociando" | "confirmado" | "recebido" | "recusado";
 
@@ -44,13 +68,28 @@ export function CaptacaoPipeline() {
   const del = useDeleteDoador();
 
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [somenteAtrasados, setSomenteAtrasados] = useState(false);
+  const [aba, setAba] = useState<"pipeline" | "relatorio">("pipeline");
   const [form, setForm] = useState(emptyForm);
+
+  const doadoresFiltrados = useMemo(() => {
+    if (!somenteAtrasados) return doadores as any[];
+    return (doadores as any[]).filter(d => slaLevel(d.status, d.updated_at) !== "ok");
+  }, [doadores, somenteAtrasados]);
+
+  const atrasadosCount = useMemo(
+    () => (doadores as any[]).filter(d => slaLevel(d.status, d.updated_at) === "estourado").length,
+    [doadores]
+  );
+
 
   const grouped = useMemo(() => {
     const g: Record<Status, any[]> = { prospect: [], contatado: [], negociando: [], confirmado: [], recebido: [], recusado: [] };
-    (doadores as any[]).forEach((d) => { if (g[d.status as Status]) g[d.status as Status].push(d); });
+    doadoresFiltrados.forEach((d) => { if (g[d.status as Status]) g[d.status as Status].push(d); });
     return g;
-  }, [doadores]);
+  }, [doadoresFiltrados]);
+
 
   const totals = useMemo(() => {
     return (doadores as any[]).reduce(
@@ -134,13 +173,30 @@ export function CaptacaoPipeline() {
         <Card><CardContent className="pt-4"><p className="text-[10px] text-muted-foreground">Doadores</p><p className="text-lg font-bold">{(doadores as any[]).length}</p></CardContent></Card>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Pipeline de Captação</h3>
-          <p className="text-xs text-muted-foreground">Prospect → Contatado → Negociando → Comprometido → Recebido</p>
+      <Tabs value={aba} onValueChange={(v) => setAba(v as any)}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <TabsList>
+            <TabsTrigger value="pipeline"><LayoutGrid className="h-3 w-3 mr-1" />Pipeline</TabsTrigger>
+            <TabsTrigger value="relatorio"><BarChart3 className="h-3 w-3 mr-1" />Relatório & Funil</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
+            {atrasadosCount > 0 && (
+              <Badge variant="outline" className="bg-red-500/10 text-red-300 cursor-pointer" onClick={() => setSomenteAtrasados(v => !v)}>
+                <AlertTriangle className="h-3 w-3 mr-1" />{atrasadosCount} atrasado{atrasadosCount > 1 ? "s" : ""}
+              </Badge>
+            )}
+            <Button variant={somenteAtrasados ? "default" : "outline"} size="sm" onClick={() => setSomenteAtrasados(v => !v)}>
+              <Clock className="h-3 w-3 mr-1" />{somenteAtrasados ? "Todos" : "Só atrasados"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="h-3 w-3 mr-1" />Importar CSV</Button>
+            <Button size="sm" onClick={openNew}><Plus className="h-3 w-3 mr-1" /> Novo doador</Button>
+          </div>
         </div>
-        <Button size="sm" onClick={openNew}><Plus className="h-3 w-3 mr-1" /> Novo doador</Button>
-      </div>
+
+        <TabsContent value="relatorio" className="mt-4"><CaptacaoRelatorio /></TabsContent>
+
+        <TabsContent value="pipeline" className="mt-4">
+
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
@@ -175,6 +231,14 @@ export function CaptacaoPipeline() {
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { if (confirm(`Remover ${d.nome}?`)) del.mutate(d.id); }}><Trash2 className="h-3 w-3 text-red-400" /></Button>
                           </div>
                         </div>
+                        {(() => {
+                          const lvl = slaLevel(d.status, d.updated_at);
+                          if (lvl === "ok") return null;
+                          const dias = diasParado(d.updated_at);
+                          const cls = lvl === "estourado" ? "bg-red-500/10 text-red-300 border-red-500/30" : "bg-amber-500/10 text-amber-300 border-amber-500/30";
+                          return <Badge variant="outline" className={`${cls} text-[9px] py-0`}><Clock className="h-2.5 w-2.5 mr-1" />Parado há {dias}d {lvl === "estourado" ? "(SLA estourado)" : "(alerta)"}</Badge>;
+                        })()}
+
                         {d.telefone && <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{d.telefone}</p>}
                         {d.email && <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail className="h-2.5 w-2.5" />{d.email}</p>}
                         <p className="text-[10px] flex items-center gap-1"><DollarSign className="h-2.5 w-2.5" />
@@ -202,8 +266,13 @@ export function CaptacaoPipeline() {
           })}
         </div>
       )}
+        </TabsContent>
+      </Tabs>
+
+      <CaptacaoImportDialog open={importOpen} onOpenChange={setImportOpen} />
 
       {/* Dialog */}
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
