@@ -86,9 +86,10 @@ export function CaptacaoPipeline() {
 
   const grouped = useMemo(() => {
     const g: Record<Status, any[]> = { prospect: [], contatado: [], negociando: [], confirmado: [], recebido: [], recusado: [] };
-    (doadores as any[]).forEach((d) => { if (g[d.status as Status]) g[d.status as Status].push(d); });
+    doadoresFiltrados.forEach((d) => { if (g[d.status as Status]) g[d.status as Status].push(d); });
     return g;
-  }, [doadores]);
+  }, [doadoresFiltrados]);
+
 
   const totals = useMemo(() => {
     return (doadores as any[]).reduce(
