@@ -231,6 +231,14 @@ export function CaptacaoPipeline() {
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { if (confirm(`Remover ${d.nome}?`)) del.mutate(d.id); }}><Trash2 className="h-3 w-3 text-red-400" /></Button>
                           </div>
                         </div>
+                        {(() => {
+                          const lvl = slaLevel(d.status, d.updated_at);
+                          if (lvl === "ok") return null;
+                          const dias = diasParado(d.updated_at);
+                          const cls = lvl === "estourado" ? "bg-red-500/10 text-red-300 border-red-500/30" : "bg-amber-500/10 text-amber-300 border-amber-500/30";
+                          return <Badge variant="outline" className={`${cls} text-[9px] py-0`}><Clock className="h-2.5 w-2.5 mr-1" />Parado há {dias}d {lvl === "estourado" ? "(SLA estourado)" : "(alerta)"}</Badge>;
+                        })()}
+
                         {d.telefone && <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{d.telefone}</p>}
                         {d.email && <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail className="h-2.5 w-2.5" />{d.email}</p>}
                         <p className="text-[10px] flex items-center gap-1"><DollarSign className="h-2.5 w-2.5" />
