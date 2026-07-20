@@ -266,8 +266,13 @@ export function CaptacaoPipeline() {
           })}
         </div>
       )}
+        </TabsContent>
+      </Tabs>
+
+      <CaptacaoImportDialog open={importOpen} onOpenChange={setImportOpen} />
 
       {/* Dialog */}
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
