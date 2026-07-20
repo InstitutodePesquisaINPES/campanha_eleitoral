@@ -173,13 +173,30 @@ export function CaptacaoPipeline() {
         <Card><CardContent className="pt-4"><p className="text-[10px] text-muted-foreground">Doadores</p><p className="text-lg font-bold">{(doadores as any[]).length}</p></CardContent></Card>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Pipeline de Captação</h3>
-          <p className="text-xs text-muted-foreground">Prospect → Contatado → Negociando → Comprometido → Recebido</p>
+      <Tabs value={aba} onValueChange={(v) => setAba(v as any)}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <TabsList>
+            <TabsTrigger value="pipeline"><LayoutGrid className="h-3 w-3 mr-1" />Pipeline</TabsTrigger>
+            <TabsTrigger value="relatorio"><BarChart3 className="h-3 w-3 mr-1" />Relatório & Funil</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
+            {atrasadosCount > 0 && (
+              <Badge variant="outline" className="bg-red-500/10 text-red-300 cursor-pointer" onClick={() => setSomenteAtrasados(v => !v)}>
+                <AlertTriangle className="h-3 w-3 mr-1" />{atrasadosCount} atrasado{atrasadosCount > 1 ? "s" : ""}
+              </Badge>
+            )}
+            <Button variant={somenteAtrasados ? "default" : "outline"} size="sm" onClick={() => setSomenteAtrasados(v => !v)}>
+              <Clock className="h-3 w-3 mr-1" />{somenteAtrasados ? "Todos" : "Só atrasados"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="h-3 w-3 mr-1" />Importar CSV</Button>
+            <Button size="sm" onClick={openNew}><Plus className="h-3 w-3 mr-1" /> Novo doador</Button>
+          </div>
         </div>
-        <Button size="sm" onClick={openNew}><Plus className="h-3 w-3 mr-1" /> Novo doador</Button>
-      </div>
+
+        <TabsContent value="relatorio" className="mt-4"><CaptacaoRelatorio /></TabsContent>
+
+        <TabsContent value="pipeline" className="mt-4">
+
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
